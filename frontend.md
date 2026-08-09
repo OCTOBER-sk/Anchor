@@ -46,9 +46,12 @@ and usage display. §4 below specifies this contract in full and flags it
 | `/dashboard` | Home — usage overview, activity feed, agent key list | Yes |
 | `/dashboard/onboarding` | First-run 2-minute setup flow (also reachable anytime) | Yes |
 | `/dashboard/settings` | Profile (email, phone), key management, danger zone | Yes |
-| `/docs` | Docs index | No |
+| `/docs` | Docs index — introduction | No |
 | `/docs/quickstart` | Quickstart — same content as onboarding, static/shareable | No |
-| `/docs/api-reference` | Full MCP tool reference (from `backend.md` §8) | No |
+| `/docs/capabilities/search` | Capability page: Search (web search + AI summaries + auto-recall) | No |
+| `/docs/capabilities/dev-search` | Capability page: Dev Search (package-aware developer search) | No |
+| `/docs/capabilities/memory` | Capability page: Memory (persistent, cross-runtime recall) | No |
+| `/docs/api-reference` | MCP protocol reference (from `backend.md` §8) — anchors: authentication, transport, error codes, rate limits | No |
 | `/docs/troubleshooting` | Common errors mapped to `backend.md` §8 error table | No |
 
 No routes beyond this list. No admin panel, no team/org pages, no billing
@@ -306,15 +309,48 @@ SettingsPage
 
 ### 3.7 `/docs/*`
 
+The docs inherit the predecessor's proven structure (owner directive — the
+old product's docs were its strongest surface): a **grouped sidebar**
+(Overview / Capabilities / Reference), **data-driven per-capability pages**
+(what/problem → schema table → example → errors → limits), and an
+anchor-linked API reference. Terminology per §2.5: "capability" everywhere
+except /docs/api-reference, where "tool" mirrors the MCP protocol's own
+vocabulary; zero tech-stack names.
+
 ```
 DocsLayout
-├─ DocsSidebar (Quickstart / API Reference / Troubleshooting)
+├─ DocsSidebar — grouped sections with anchor links:
+│   Overview: Introduction (/docs), Quickstart (/docs/quickstart)
+│   Capabilities: Search, Dev Search, Memory (/docs/capabilities/*)
+│   Reference: API Reference (/docs/api-reference#authentication,
+│     #transport, #error-codes, #rate-limits), Troubleshooting
 └─ DocsContent (per-route)
-    ├─ QuickstartPage — mirrors OnboardingFlow content, static (no auth calls)
-    ├─ ApiReferencePage — one ToolReferenceBlock per tool (5 total, from backend.md §8)
-    │   └─ ToolReferenceBlock { name, description, inputSchema (rendered), outputShape (rendered) }
-    └─ TroubleshootingPage — one ErrorCard per platform error code (backend.md §8 table)
+    ├─ DocsHomePage — Introduction: what Anchor is, the 3-capability
+    │   narrative, link to Quickstart
+    ├─ QuickstartPage — mirrors OnboardingFlow content, static (no auth
+    │   calls); "2-minute setup" lead
+    ├─ CapabilityPage × 3 — data-driven from content/capability-pages-data.ts
+    │   (predecessor's ToolPageData pattern, adapted): id, name, description,
+    │   bestFor[], what it does, the problem it solves, input schema table
+    │   (param/type/required/default/description), input example,
+    │   output schema table (field/type/description), output example,
+    │   worked examples, error rows (code/cause/resolution), limits table
+    ├─ ApiReferencePage — the MCP protocol surface from backend.md §8:
+    │   initialize, tools/list (5 tools), tools/call per tool with Zod
+    │   schemas + output shapes, error table; anchors: authentication
+    │   (agent-key bearer), transport (Streamable HTTP, protocol
+    │   2025-11-25), error codes (all 7 rows), rate limits (30/min,
+    │   500/day per agent)
+    └─ TroubleshootingPage — one ErrorCard per platform error code
+        (backend.md §8 table)
 ```
+
+**Consistency rule**: the human docs and the agent-facing guide
+(`worker/src/tools/guide.ts` GUIDE_CONTENT) must describe the same 5 tools
+with the same descriptions — no drift between what a human reads and what an
+agent sees. ApiReferencePage data and GUIDE_CONTENT both derive from
+`backend.md` §8. This is a direct lesson from the predecessor, whose docs
+drifted from its code (documented in the old project's known-issues).
 
 ---
 
@@ -688,8 +724,10 @@ visit to `/login` redirects to `/dashboard`.
 **Files**: `pages/Landing.tsx`, `components/CapabilitySection.tsx`,
 `content/landing-copy.ts` (all landing copy as data — pain-story hero,
 3-step HowItWorks, differentiated capability cards per §3.1),
+`content/capability-pages-data.ts` (the ToolPageData pattern from §3.7:
+Search / Dev Search / Memory pages data),
 `content/api-reference-data.ts` (structured data mirroring `backend.md` §8,
-consumed by `ApiReferencePage`), `pages/docs/*`.
+consumed by `ApiReferencePage`), `pages/docs/*` (incl. 3 CapabilityPages).
 
 **Acceptance**: landing renders the §3.1 pain-story composition (hero →
 3-step fix → differentiated capability surfaces → runtime strip); API
@@ -850,3 +888,22 @@ owner-approved pain story ("Every session, you re-explain everything" →
 3-step fix → differentiated capability surfaces). F1 shells must be clean
 empty states, never construction notices; F3 acceptance adds grep checks
 for leakage/banned wordings plus a reported slop-audit score (≤2).
+
+## Appendix E: Docs Structure Inspiration (2026-08-09, owner directive)
+
+Owner directive: the predecessor's frontend was its strongest surface in the
+docs — detailed, data-driven, per-capability. Anchor inherits that structure
+while applying §2.5 (no tech leakage, clean terminology, "capability" not
+"tool" outside the API reference). Implemented as §3.7 + §1 route additions:
+
+- Grouped docs sidebar (Overview / Capabilities / Reference) with anchor
+  links — from the predecessor's DocsLayout.
+- Data-driven per-capability pages (what/problem → input schema table →
+  example → output schema table → example → worked examples → errors →
+  limits) — the predecessor's ToolPageData pattern, adapted.
+- Anchor-linked API reference (authentication, transport, error codes,
+  rate limits) with the full §8 error table.
+- **Consistency rule (lesson from the predecessor's known-issues)**: docs
+  and the agent-facing GUIDE_CONTENT must derive from backend.md §8 with
+  zero drift — the old product's docs drifted from its code; Anchor's
+  won't.
