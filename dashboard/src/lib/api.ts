@@ -71,21 +71,18 @@ function toApiError(status: number, body: unknown): ApiError {
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'DELETE';
   body?: unknown;
-  skipAuth?: boolean;
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, skipAuth = false } = options;
+  const { method = 'GET', body } = options;
 
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   const headers: Record<string, string> = {};
-  if (!skipAuth) {
-    const token = await getAccessToken();
-    if (token !== null) {
-      headers.Authorization = `Bearer ${token}`;
-    }
+  const token = await getAccessToken();
+  if (token !== null) {
+    headers.Authorization = `Bearer ${token}`;
   }
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
@@ -194,10 +191,6 @@ export type OnboardingValidation =
 /* ------------------------------------------------------------------ */
 /* Endpoints                                                           */
 /* ------------------------------------------------------------------ */
-
-export async function fetchHealth(): Promise<{ status: string; version: string }> {
-  return request('/health', { skipAuth: true });
-}
 
 export async function createAgentKey(name: string): Promise<CreatedAgentKey> {
   return request('/agent-keys', { method: 'POST', body: { name } });

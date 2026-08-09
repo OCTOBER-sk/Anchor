@@ -1,4 +1,4 @@
-import type { AgentRecord, AgentTier, Context, Env } from '../src/context';
+import type { AgentRecord, Context, Env } from '../src/context';
 import type { SearchResult } from '../src/search/dev-router';
 import { hashAgentKey } from '../src/auth/verify';
 

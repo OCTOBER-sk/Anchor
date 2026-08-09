@@ -2,8 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Client, ResultSet } from '@libsql/client/web';
 import { createClient } from '@libsql/client/web';
 import { lookupAgent, createAgent, listAgents, revokeAgent, slugify, deriveUniqueSlug, listAgentKeys, logRequest, queryUsageSummary, queryActivity } from '../src/storage/turso';
-import { buildTestEnv, createMemoryKV, TEST_AGENT, type MemoryKV } from './test-utils';
-import type { Env } from '../src/context';
+import { buildTestEnv, TEST_AGENT, type MemoryKV } from './test-utils';
 
 vi.mock('@libsql/client/web', () => ({
   createClient: vi.fn(),

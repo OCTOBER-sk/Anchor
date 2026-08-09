@@ -1,5 +1,3 @@
-import type { ReactNode } from 'react';
-
 import { CopyButton } from './CopyButton';
 
 /**
@@ -17,9 +15,4 @@ export function CodeBlock({ code }: { code: string }) {
       </pre>
     </figure>
   );
-}
-
-/** Inline code within prose — code-accent, mono. */
-export function InlineCode({ children }: { children: ReactNode }) {
-  return <code className="code-inline rounded bg-bg-sunken px-1.5 py-0.5 text-mono-sm">{children}</code>;
 }

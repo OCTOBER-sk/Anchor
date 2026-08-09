@@ -4,7 +4,7 @@ import { getCached, setCached } from '../storage/kv';
 import { runSearchPipeline, type SearchProvider, type SearchResultItem } from '../search/dev-router';
 import type { SearchInValue } from '../mcp/validation';
 import { embedText } from '../ai/gemini';
-import { matchMemoriesLite, type MemoryMatch } from '../storage/supabase';
+import { matchMemoriesLite } from '../storage/supabase';
 import { resolveMemoryScope } from '../auth/ownership';
 import { captureError } from '../utils/monitoring';
 
