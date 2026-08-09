@@ -2,6 +2,7 @@ import type { Env } from './context';
 import { MAX_JSON_BODY_BYTES } from './utils/errors';
 import { ping } from './utils/keepalive';
 import { handleRequest } from './mcp/server';
+import { handleApi } from './api/router';
 
 const MAX_AGE = 86400;
 
@@ -69,6 +70,11 @@ export default {
     }
 
     const url = new URL(request.url);
+
+    if (url.pathname.startsWith('/api/')) {
+      const response = await handleApi(request, env, url.pathname);
+      return withCors(response, cors);
+    }
 
     if (request.method === 'POST' && url.pathname === '/mcp') {
       const declaredLength = Number(request.headers.get('Content-Length') ?? '0');

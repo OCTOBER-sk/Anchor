@@ -3,6 +3,7 @@ export type AgentTier = 'standard' | 'admin' | 'debug';
 export interface AgentRecord {
   id: string;
   slug: string;
+  name: string;
   ownerId: string;
   tier: AgentTier;
   status: 'active' | 'revoked';

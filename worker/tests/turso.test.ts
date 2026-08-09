@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Client, ResultSet } from '@libsql/client/web';
 import { createClient } from '@libsql/client/web';
-import { lookupAgent, createAgent, listAgents, revokeAgent } from '../src/storage/turso';
+import { lookupAgent, createAgent, listAgents, revokeAgent, slugify, deriveUniqueSlug, listAgentKeys, logRequest, queryUsageSummary, queryActivity } from '../src/storage/turso';
 import { buildTestEnv, createMemoryKV, TEST_AGENT, type MemoryKV } from './test-utils';
 import type { Env } from '../src/context';
 
@@ -18,6 +18,7 @@ function agentRow(overrides: Partial<MockRow> = {}): MockRow {
     id: 'agent-1',
     key_hash: 'hash1',
     slug: 'cli',
+    name: '',
     owner_id: 'anchor-owner',
     tier: 'standard',
     rate_limit_per_min: 30,
@@ -57,6 +58,7 @@ describe('storage/turso', () => {
     expect(record).toEqual({
       id: 'agent-1',
       slug: 'cli',
+      name: '',
       ownerId: 'anchor-owner',
       tier: 'standard',
       status: 'active',
@@ -173,5 +175,167 @@ describe('storage/turso', () => {
       'database unavailable',
     );
     expect(agentKv.data.has('hash-new')).toBe(false);
+  });
+
+  it('slugify lowercases and makes names URL-safe', () => {
+    expect(slugify('Cursor — work')).toBe('cursor-work');
+    expect(slugify('  My  Key!!')).toBe('my-key');
+    expect(slugify('Backup Phone')).toBe('backup-phone');
+    expect(slugify('!!!')).toBe('agent');
+  });
+
+  it('deriveUniqueSlug appends -2, -3 on collision', async () => {
+    executeMock.mockResolvedValue(resultSet([{ slug: 'cursor' }, { slug: 'cursor-2' }]));
+
+    const env = await buildTestEnv();
+    const slug = await deriveUniqueSlug('Cursor', env);
+
+    expect(slug).toBe('cursor-3');
+    expect(executeMock.mock.calls[0]?.[0]).toMatchObject({
+      sql: expect.stringContaining('select slug from agents'),
+    });
+  });
+
+  it('createAgent derives a URL-safe slug from the name and dedupes against existing slugs', async () => {
+    executeMock
+      .mockResolvedValueOnce(resultSet([{ slug: 'cursor' }])) // existing slug collision
+      .mockResolvedValueOnce(resultSet()); // insert
+
+    const env = await buildTestEnv();
+    const record = await createAgent({ keyHash: 'hashX', name: 'Cursor', ownerId: 'anchor-owner' }, env);
+
+    expect(record.slug).toBe('cursor-2');
+    expect(record.name).toBe('Cursor');
+    expect(record.tier).toBe('standard');
+    expect(record.status).toBe('active');
+
+    const insertCall = executeMock.mock.calls[1]?.[0];
+    expect(insertCall.sql).toContain('insert into agents');
+    expect(insertCall.args).toContain('cursor-2');
+    expect(insertCall.args).toContain('Cursor');
+
+    const agentKv = env.AGENT_KEYS as unknown as MemoryKV;
+    const cached = JSON.parse(agentKv.data.get('hashX') ?? '{}');
+    expect(cached.slug).toBe('cursor-2');
+    expect(cached.name).toBe('Cursor');
+  });
+
+  it('listAgentKeys maps rows to masked key prefixes and never returns the raw key', async () => {
+    executeMock.mockResolvedValue(
+      resultSet([
+        {
+          id: 'a1',
+          key_hash: 'abcdef0123456789...',
+          slug: 'cursor',
+          name: 'Cursor',
+          tier: 'standard',
+          status: 'active',
+          created_at: '2026-08-09T00:00:00.000Z',
+          last_used_at: null,
+          rate_limit_per_min: 30,
+          rate_limit_per_day: 500,
+        },
+      ]),
+    );
+
+    const env = await buildTestEnv();
+    const keys = await listAgentKeys(env);
+
+    expect(keys).toHaveLength(1);
+    expect(keys[0]?.name).toBe('Cursor');
+    expect(keys[0]?.keyPrefix).toBe('anchor_cursor_abcdef01…');
+    expect(keys[0]?.rateLimitPerMin).toBe(30);
+    expect(keys[0]?.createdAt).toBe('2026-08-09T00:00:00.000Z');
+    expect(JSON.stringify(keys)).not.toContain('anchor_cursor_abcdef0123456789');
+  });
+
+  it('logRequest inserts a row and swallows database errors', async () => {
+    executeMock.mockResolvedValue(resultSet());
+
+    const env = await buildTestEnv();
+    await logRequest(
+      { agentId: 'a1', toolName: 'anchor_search', status: 'success', latencyMs: 42, createdAt: '2026-08-09T00:00:00Z' },
+      env,
+    );
+
+    const insertCall = executeMock.mock.calls[0]?.[0];
+    expect(insertCall.sql).toContain('insert into requests');
+    expect(insertCall.args).toContain('a1');
+    expect(insertCall.args).toContain('anchor_search');
+    expect(insertCall.args).toContain('success');
+
+    executeMock.mockRejectedValue(new Error('db unavailable'));
+    await expect(
+      logRequest({ agentId: 'a1', toolName: 'anchor_guide', status: 'error', errorCode: 'INTERNAL_ERROR', latencyMs: 5, createdAt: '2026-08-09T00:00:00Z' }, env),
+    ).resolves.toBeUndefined();
+  });
+
+  it('queryUsageSummary computes today/month totals, active key count, and by-capability usage', async () => {
+    const now = new Date();
+    const todayIso = now.toISOString();
+
+    executeMock
+      .mockResolvedValueOnce(resultSet([{ c: 2 }])) // active count
+      .mockResolvedValueOnce(
+        resultSet([
+          { tool_name: 'anchor_search', created_at: todayIso },
+          { tool_name: 'anchor_search', created_at: todayIso },
+          { tool_name: 'anchor_dev_search', created_at: '2026-08-01T00:00:00Z' },
+          { tool_name: 'anchor_recall', created_at: todayIso },
+          { tool_name: 'anchor_guide', created_at: todayIso },
+        ]),
+      );
+
+    const env = await buildTestEnv();
+    const summary = await queryUsageSummary(env);
+
+    expect(summary.requestsToday).toBe(4);
+    expect(summary.requestsThisMonth).toBe(5);
+    expect(summary.activeKeyCount).toBe(2);
+    expect(summary.byCapability.search).toEqual({ count: 2, lastUsedAt: todayIso });
+    expect(summary.byCapability.devSearch).toEqual({ count: 1, lastUsedAt: '2026-08-01T00:00:00Z' });
+    expect(summary.byCapability.memory).toEqual({ count: 1, lastUsedAt: todayIso });
+  });
+
+  it('queryActivity maps rows to items with errorCode and agentSlug', async () => {
+    executeMock.mockResolvedValue(
+      resultSet([
+        {
+          id: 'r1',
+          tool_name: 'anchor_search',
+          status: 'error',
+          error_code: 'SEARCH_UNAVAILABLE',
+          latency_ms: 12,
+          created_at: '2026-08-09T00:00:00Z',
+          agent_slug: 'cursor',
+        },
+        {
+          id: 'r2',
+          tool_name: 'anchor_guide',
+          status: 'success',
+          error_code: null,
+          latency_ms: 3,
+          created_at: '2026-08-08T00:00:00Z',
+          agent_slug: null,
+        },
+      ]),
+    );
+
+    const env = await buildTestEnv();
+    const items = await queryActivity(20, env);
+
+    expect(items).toHaveLength(2);
+    expect(items[0]).toEqual({
+      id: 'r1',
+      tool: 'anchor_search',
+      status: 'error',
+      errorCode: 'SEARCH_UNAVAILABLE',
+      latencyMs: 12,
+      createdAt: '2026-08-09T00:00:00Z',
+      agentSlug: 'cursor',
+    });
+    expect(items[1]?.errorCode).toBeUndefined();
+    expect(items[1]?.agentSlug).toBe('');
+    expect(executeMock.mock.calls[0]?.[0].args).toEqual([20]);
   });
 });

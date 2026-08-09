@@ -6,6 +6,7 @@ import { isValidKeyFormat } from '../auth/keys';
 import { verifyAgentKey } from '../auth/verify';
 import { checkAndIncrement } from '../auth/ratelimit';
 import { buildToolsList, dispatchToolCall } from './router';
+import { logRequest } from '../storage/turso';
 
 export const PROTOCOL_VERSION = '2025-11-25';
 
@@ -97,16 +98,43 @@ async function handleToolsCall(id: string | number, params: unknown, ctx: Contex
     return jsonRpcFailure(id, toJsonRpcError('INVALID_PARAMS', 'Missing or invalid tool name.'));
   }
 
+  const toolName = args.name;
+  const startedAt = Date.now();
+  let status: 'success' | 'error';
+  let errorCode: string | undefined;
+  let finalResponse: Response;
+
   try {
-    const result = await dispatchToolCall(args.name, args.arguments ?? {}, ctx);
-    return jsonRpcSuccess(id, result);
+    const result = await dispatchToolCall(toolName, args.arguments ?? {}, ctx);
+    status = 'success';
+    finalResponse = jsonRpcSuccess(id, result);
   } catch (err) {
+    status = 'error';
     if (err instanceof PlatformError) {
-      return jsonRpcFailure(id, toJsonRpcError(err.code, err.detail));
+      errorCode = err.code;
+      finalResponse = jsonRpcFailure(id, toJsonRpcError(err.code, err.detail));
+    } else {
+      captureError('mcp/server.ts::handleToolsCall', err, { toolName });
+      errorCode = 'INTERNAL_ERROR';
+      finalResponse = jsonRpcFailure(id, toJsonRpcError('INTERNAL_ERROR'));
     }
-    captureError('mcp/server.ts::handleToolsCall', err, { toolName: args.name });
-    return jsonRpcFailure(id, toJsonRpcError('INTERNAL_ERROR'));
   }
+
+  // Append to the request log. Fire-and-forget — logging must never break the
+  // MCP call, so the promise is intentionally not awaited.
+  void logRequest(
+    {
+      agentId: ctx.agentId,
+      toolName,
+      status,
+      errorCode,
+      latencyMs: Date.now() - startedAt,
+      createdAt: new Date().toISOString(),
+    },
+    ctx.env,
+  );
+
+  return finalResponse;
 }
 
 export async function handleRequest(request: Request, env: Env): Promise<Response> {

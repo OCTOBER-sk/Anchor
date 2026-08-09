@@ -7,6 +7,7 @@ export const TEST_AGENT_KEY = 'anchor_testagent_0123456789abcdef0123456789abcdef
 export const TEST_AGENT: AgentRecord = {
   id: 'test-agent-id',
   slug: 'testagent',
+  name: 'Test Agent',
   ownerId: 'anchor-owner',
   tier: 'standard',
   status: 'active',
