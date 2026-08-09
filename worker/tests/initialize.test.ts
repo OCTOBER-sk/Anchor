@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Env } from '../src/context';
 import { handleRequest } from '../src/mcp/server';
+import { buildTestEnv, TEST_AGENT_KEY } from './test-utils';
 
 interface RpcError {
   code: number;
@@ -15,30 +16,13 @@ interface RpcResponse {
   error?: RpcError;
 }
 
-function fakeEnv(): Env {
-  return {
-    AGENT_KEYS: null as unknown as KVNamespace,
-    RATE_LIMIT: null as unknown as KVNamespace,
-    RESPONSE_CACHE: null as unknown as KVNamespace,
-    TURSO_DATABASE_URL: 'libsql://test.turso.io',
-    TURSO_AUTH_TOKEN: 'test',
-    SUPABASE_URL: 'https://test.supabase.co',
-    SUPABASE_SERVICE_ROLE_KEY: 'test',
-    CEREBRAS_API_KEY: 'csk-test',
-    GEMINI_API_KEY: 'AIza-test',
-    TAVILY_API_KEY: 'tvly-test',
-    APIFY_API_TOKEN: 'apify_api_test',
-    ALLOWED_ORIGINS: 'https://claude.ai',
-  };
-}
-
-async function rpc(body: unknown): Promise<RpcResponse> {
+async function rpc(body: unknown, env?: Env): Promise<RpcResponse> {
   const request = new Request('https://anchor-mcp.test.workers.dev/mcp', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TEST_AGENT_KEY}` },
     body: JSON.stringify(body),
   });
-  const response = await handleRequest(request, fakeEnv());
+  const response = await handleRequest(request, env ?? (await buildTestEnv()));
   expect(response.status).toBe(200);
   return (await response.json()) as RpcResponse;
 }

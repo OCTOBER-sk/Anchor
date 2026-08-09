@@ -1,12 +1,19 @@
-import type { Env, Context } from '../context';
+import type { AgentRecord, Context, Env } from '../context';
+import { buildContext } from '../context';
 import { PlatformError, toJsonRpcError, type JsonRpcError } from '../utils/errors';
 import { captureError } from '../utils/monitoring';
+import { isValidKeyFormat } from '../auth/keys';
+import { verifyAgentKey } from '../auth/verify';
+import { checkAndIncrement } from '../auth/ratelimit';
 import { buildToolsList, dispatchToolCall } from './router';
 
 export const PROTOCOL_VERSION = '2025-11-25';
 
 const JSONRPC_INVALID_REQUEST = -32600;
 const JSONRPC_METHOD_NOT_FOUND = -32601;
+const AUTH_ERROR_CODE = -32001;
+
+const AUTH_FAILURE_MESSAGE = 'Authentication failed.';
 
 export interface InitializeResult {
   protocolVersion: string;
@@ -53,18 +60,42 @@ export async function handleInitialize(_params: unknown): Promise<InitializeResu
   };
 }
 
-async function handleToolsCall(id: string | number, params: unknown, env: Env): Promise<Response> {
+function extractBearerToken(request: Request): string | null {
+  const header = request.headers.get('Authorization');
+  if (header === null) {
+    return null;
+  }
+  const match = /^Bearer\s+(.+)$/i.exec(header.trim());
+  return match?.[1] ?? null;
+}
+
+async function authenticate(request: Request, env: Env): Promise<AgentRecord | null> {
+  const key = extractBearerToken(request);
+  if (key === null || !isValidKeyFormat(key)) {
+    return null;
+  }
+  let agent: AgentRecord | null;
+  try {
+    agent = await verifyAgentKey(key, env);
+  } catch (err) {
+    captureError('mcp/server.ts::authenticate', err, { stage: 'verify' });
+    return null;
+  }
+  if (agent === null || agent.status !== 'active') {
+    return null;
+  }
+  return agent;
+}
+
+function authFailure(id: string | number | null): Response {
+  return jsonRpcFailure(id, { code: AUTH_ERROR_CODE, message: AUTH_FAILURE_MESSAGE });
+}
+
+async function handleToolsCall(id: string | number, params: unknown, ctx: Context): Promise<Response> {
   const args = (params ?? {}) as { name?: unknown; arguments?: unknown };
   if (typeof args.name !== 'string' || args.name.length === 0) {
     return jsonRpcFailure(id, toJsonRpcError('INVALID_PARAMS', 'Missing or invalid tool name.'));
   }
-
-  const ctx: Context = {
-    env,
-    agentId: 'phase1-stub-agent',
-    agentTier: 'standard',
-    requestId: crypto.randomUUID(),
-  };
 
   try {
     const result = await dispatchToolCall(args.name, args.arguments ?? {}, ctx);
@@ -94,13 +125,29 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
   const { id, method, params } = envelope;
 
   try {
+    const agent = await authenticate(request, env);
+    if (agent === null) {
+      return authFailure(id);
+    }
+
+    const ctx = buildContext(request, env, agent);
+
+    const rateResult = await checkAndIncrement(agent.id, agent.rateLimits, env);
+    if (!rateResult.allowed) {
+      const base = toJsonRpcError('RATE_LIMITED');
+      return jsonRpcFailure(id, {
+        ...base,
+        data: { ...(base.data as Record<string, unknown>), resetAtMinute: rateResult.resetAtMinute, resetAtDay: rateResult.resetAtDay },
+      });
+    }
+
     switch (method) {
       case 'initialize':
         return jsonRpcSuccess(id, await handleInitialize(params));
       case 'tools/list':
         return jsonRpcSuccess(id, { tools: buildToolsList() });
       case 'tools/call':
-        return handleToolsCall(id, params, env);
+        return handleToolsCall(id, params, ctx);
       default:
         return jsonRpcFailure(id, { code: JSONRPC_METHOD_NOT_FOUND, message: 'Method not found' });
     }
