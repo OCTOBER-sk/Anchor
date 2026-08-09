@@ -1,6 +1,8 @@
 import type { ProviderResult, ProviderResultItem, SearchOpts } from './dev-router';
+import { safeFetch } from '../utils/safe-fetch';
 
 const DDG_HTML_URL = 'https://html.duckduckgo.com/html/';
+const DDG_ALLOWED_HOSTS = ['*.duckduckgo.com'];
 const REQUEST_TIMEOUT_MS = 10_000;
 const MAX_ATTEMPTS = 3;
 const BACKOFF_BASE_MS = 250;
@@ -87,10 +89,11 @@ async function fetchOnce(query: string): Promise<ProviderResultItem[]> {
   const url = new URL(DDG_HTML_URL);
   url.searchParams.set('q', query);
 
-  const response = await fetch(url.toString(), {
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AnchorMCP/1.0)' },
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
+  const response = await safeFetch(
+    url.toString(),
+    { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AnchorMCP/1.0)' } },
+    { allowedHosts: DDG_ALLOWED_HOSTS, timeoutMs: REQUEST_TIMEOUT_MS },
+  );
   const text = await response.text();
 
   if (response.status === 429 || response.status === 202 || response.status === 403) {

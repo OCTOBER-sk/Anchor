@@ -1,3 +1,5 @@
+import { safeFetch } from '../utils/safe-fetch';
+
 export type Ecosystem = 'npm' | 'pypi' | 'cargo' | 'go';
 
 export interface RegistryResult {
@@ -10,6 +12,7 @@ export interface RegistryResult {
 }
 
 const REQUEST_TIMEOUT_MS = 10_000;
+const REGISTRY_ALLOWED_HOSTS = ['registry.npmjs.org', 'pypi.org', 'crates.io', 'proxy.golang.org'];
 
 function encodeGoModulePath(modulePath: string): string {
   return modulePath
@@ -20,7 +23,7 @@ function encodeGoModulePath(modulePath: string): string {
 
 async function fetchJson<T>(url: string): Promise<T | null> {
   try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+    const response = await safeFetch(url, {}, { allowedHosts: REGISTRY_ALLOWED_HOSTS, timeoutMs: REQUEST_TIMEOUT_MS });
     if (!response.ok) {
       return null;
     }

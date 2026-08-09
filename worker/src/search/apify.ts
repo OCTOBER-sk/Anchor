@@ -1,8 +1,10 @@
 import type { Env } from '../context';
 import { getApifyBudgetCounter, incrementApifyBudgetCounter } from '../storage/kv';
+import { safeFetch } from '../utils/safe-fetch';
 import type { ProviderResult, ProviderResultItem, SearchOpts } from './dev-router';
 
 const APIFY_API_BASE = 'https://api.apify.com/v2';
+const APIFY_ALLOWED_HOSTS = ['*.apify.com'];
 const DEFAULT_ACTOR_ID = 'apify/google-search-scraper';
 const MONTHLY_BUDGET_CENTS = 450;
 const ESTIMATED_RUN_COST_CENTS = 50;
@@ -20,15 +22,18 @@ async function budgetAllowsStart(env: Env): Promise<boolean> {
 }
 
 async function startRun(actorId: string, query: string, env: Env): Promise<string> {
-  const response = await fetch(`${APIFY_API_BASE}/acts/${actorId}/runs`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.APIFY_API_TOKEN}`,
-      'Content-Type': 'application/json',
+  const response = await safeFetch(
+    `${APIFY_API_BASE}/acts/${actorId}/runs`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.APIFY_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ input: { query } }),
     },
-    body: JSON.stringify({ input: { query } }),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
+    { allowedHosts: APIFY_ALLOWED_HOSTS, timeoutMs: REQUEST_TIMEOUT_MS },
+  );
   if (!response.ok) {
     throw new Error(`Apify run start failed with HTTP ${response.status}`);
   }
@@ -41,10 +46,11 @@ async function startRun(actorId: string, query: string, env: Env): Promise<strin
 }
 
 async function pollStatus(runId: string, env: Env): Promise<string> {
-  const response = await fetch(`${APIFY_API_BASE}/actor-runs/${runId}`, {
-    headers: { Authorization: `Bearer ${env.APIFY_API_TOKEN}` },
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
+  const response = await safeFetch(
+    `${APIFY_API_BASE}/actor-runs/${runId}`,
+    { headers: { Authorization: `Bearer ${env.APIFY_API_TOKEN}` } },
+    { allowedHosts: APIFY_ALLOWED_HOSTS, timeoutMs: REQUEST_TIMEOUT_MS },
+  );
   if (!response.ok) {
     throw new Error(`Apify run poll failed with HTTP ${response.status}`);
   }
@@ -53,10 +59,11 @@ async function pollStatus(runId: string, env: Env): Promise<string> {
 }
 
 async function fetchDataset(runId: string, env: Env): Promise<ProviderResultItem[]> {
-  const response = await fetch(`${APIFY_API_BASE}/actor-runs/${runId}/dataset/items`, {
-    headers: { Authorization: `Bearer ${env.APIFY_API_TOKEN}` },
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
+  const response = await safeFetch(
+    `${APIFY_API_BASE}/actor-runs/${runId}/dataset/items`,
+    { headers: { Authorization: `Bearer ${env.APIFY_API_TOKEN}` } },
+    { allowedHosts: APIFY_ALLOWED_HOSTS, timeoutMs: REQUEST_TIMEOUT_MS },
+  );
   if (!response.ok) {
     throw new Error(`Apify dataset fetch failed with HTTP ${response.status}`);
   }

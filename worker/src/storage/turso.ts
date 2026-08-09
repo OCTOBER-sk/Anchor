@@ -1,5 +1,6 @@
 import { createClient, type Client } from '@libsql/client/web';
 import type { AgentRecord, AgentTier, Env } from '../context';
+import { validateFetchUrl, safeFetch } from '../utils/safe-fetch';
 import { getAgentRecord, setAgentRecord } from './kv';
 
 export interface NewAgentRecord {
@@ -12,6 +13,10 @@ export interface NewAgentRecord {
 
 const AGENT_COLUMNS =
   'id, key_hash, slug, owner_id, tier, rate_limit_per_min, rate_limit_per_day, status, created_at, last_used_at';
+
+const TURSO_ALLOWED_SCHEMES = ['https', 'wss', 'libsql'];
+const TURSO_ALLOWED_HOSTS = ['*.turso.io'];
+const TURSO_TIMEOUT_MS = 15_000;
 
 interface AgentRow {
   id: string;
@@ -26,8 +31,29 @@ interface AgentRow {
   last_used_at: string | null;
 }
 
+function toUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') {
+    return input;
+  }
+  if (input instanceof URL) {
+    return input.href;
+  }
+  return input.url;
+}
+
+function tursoFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  return safeFetch(toUrl(input), init ?? {}, {
+    allowedSchemes: TURSO_ALLOWED_SCHEMES,
+    allowedHosts: TURSO_ALLOWED_HOSTS,
+    timeoutMs: TURSO_TIMEOUT_MS,
+  });
+}
+
 function makeClient(env: Env): Client {
-  return createClient({ url: env.TURSO_DATABASE_URL, authToken: env.TURSO_AUTH_TOKEN });
+  if (!validateFetchUrl(env.TURSO_DATABASE_URL, { allowedSchemes: TURSO_ALLOWED_SCHEMES, allowedHosts: TURSO_ALLOWED_HOSTS })) {
+    throw new Error('Blocked by SSRF guard: invalid Turso database URL.');
+  }
+  return createClient({ url: env.TURSO_DATABASE_URL, authToken: env.TURSO_AUTH_TOKEN, fetch: tursoFetch });
 }
 
 function rowToAgentRecord(row: AgentRow): AgentRecord {

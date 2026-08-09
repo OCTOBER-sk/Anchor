@@ -4,6 +4,7 @@ import { PlatformError } from '../utils/errors';
 import { handleSearch } from '../tools/search';
 import { handleDevSearch } from '../tools/devsearch';
 import { handleRemember, handleRecall } from '../tools/memory';
+import { handleGuide } from '../tools/guide';
 import {
   SearchInputSchema,
   DevSearchInputSchema,
@@ -21,15 +22,6 @@ export interface ToolDefinition {
 
 export interface ToolCallResult {
   content: Array<{ type: 'text'; text: string }>;
-}
-
-function stubHandler(toolName: string, phase: number) {
-  return (_args: unknown, _ctx: Context): Promise<unknown> =>
-    Promise.resolve({
-      stub: true,
-      tool: toolName,
-      message: `Not implemented yet — Phase ${phase}`,
-    });
 }
 
 export const TOOL_REGISTRY: ToolDefinition[] = [
@@ -62,7 +54,7 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     name: 'anchor_guide',
     description: 'Returns usage documentation for the other four Anchor tools.',
     schema: GuideInputSchema,
-    handler: stubHandler('anchor_guide', 3),
+    handler: (args, ctx) => handleGuide(args, ctx),
   },
 ];
 

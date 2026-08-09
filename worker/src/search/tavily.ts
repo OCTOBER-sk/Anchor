@@ -1,8 +1,10 @@
 import type { Env } from '../context';
 import { getTavilyBudgetCounter, incrementTavilyBudgetCounter } from '../storage/kv';
+import { safeFetch } from '../utils/safe-fetch';
 import type { ProviderResult, SearchOpts } from './dev-router';
 
 const TAVILY_API_URL = 'https://api.tavily.com/search';
+const TAVILY_ALLOWED_HOSTS = ['api.tavily.com'];
 const TAVILY_MONTHLY_CREDITS = 1000;
 const BASIC_SEARCH_CREDITS = 1;
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -15,20 +17,23 @@ export async function isTavilyBudgetHealthy(env: Env): Promise<boolean> {
 }
 
 export async function tavilySearch(query: string, opts: SearchOpts, env: Env): Promise<ProviderResult> {
-  const response = await fetch(TAVILY_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${env.TAVILY_API_KEY}`,
+  const response = await safeFetch(
+    TAVILY_API_URL,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${env.TAVILY_API_KEY}`,
+      },
+      body: JSON.stringify({
+        query,
+        max_results: opts.maxResults,
+        search_depth: 'basic',
+        include_answer: false,
+      }),
     },
-    body: JSON.stringify({
-      query,
-      max_results: opts.maxResults,
-      search_depth: 'basic',
-      include_answer: false,
-    }),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
+    { allowedHosts: TAVILY_ALLOWED_HOSTS, timeoutMs: REQUEST_TIMEOUT_MS },
+  );
 
   if (!response.ok) {
     const body = await response.text().catch(() => '');

@@ -1,25 +1,30 @@
 import type { Env } from '../context';
 import { AIProviderError } from './router';
+import { safeFetch } from '../utils/safe-fetch';
 
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const EMBEDDING_MODEL = 'text-embedding-004';
+const GEMINI_ALLOWED_HOSTS = ['generativelanguage.googleapis.com'];
 const REQUEST_TIMEOUT_MS = 15_000;
 
 export async function generateContent(prompt: string, opts: { maxTokens?: number }, env: Env): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': env.GEMINI_API_KEY,
+  const response = await safeFetch(
+    url,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': env.GEMINI_API_KEY,
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: opts.maxTokens ?? 300 },
+      }),
     },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: opts.maxTokens ?? 300 },
-    }),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
+    { allowedHosts: GEMINI_ALLOWED_HOSTS, timeoutMs: REQUEST_TIMEOUT_MS },
+  );
 
   if (!response.ok) {
     const body = await response.text().catch(() => '');
@@ -43,17 +48,20 @@ export async function generateContent(prompt: string, opts: { maxTokens?: number
 export async function embedText(text: string, env: Env): Promise<number[]> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:embedContent`;
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': env.GEMINI_API_KEY,
+  const response = await safeFetch(
+    url,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': env.GEMINI_API_KEY,
+      },
+      body: JSON.stringify({
+        content: { parts: [{ text }] },
+      }),
     },
-    body: JSON.stringify({
-      content: { parts: [{ text }] },
-    }),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
+    { allowedHosts: GEMINI_ALLOWED_HOSTS, timeoutMs: REQUEST_TIMEOUT_MS },
+  );
 
   if (!response.ok) {
     const body = await response.text().catch(() => '');

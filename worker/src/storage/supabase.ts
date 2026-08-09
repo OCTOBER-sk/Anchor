@@ -1,4 +1,5 @@
 import type { Env } from '../context';
+import { safeFetch } from '../utils/safe-fetch';
 
 export interface MemoryEntry {
   ownerId: string;
@@ -29,6 +30,8 @@ export interface MatchLiteOpts {
 
 const AUTO_RECALL_MATCH_THRESHOLD = 0.72;
 const AUTO_RECALL_MATCH_COUNT = 4;
+const SUPABASE_ALLOWED_HOSTS = ['*.supabase.co'];
+const REQUEST_TIMEOUT_MS = 15_000;
 
 function supabaseRestUrl(env: Env, path: string): string {
   return `${env.SUPABASE_URL}/rest/v1${path}`;
@@ -44,18 +47,22 @@ function supabaseHeaders(env: Env, extra: Record<string, string> = {}): Record<s
 }
 
 export async function writeMemory(entry: MemoryEntry, env: Env): Promise<{ id: string }> {
-  const response = await fetch(supabaseRestUrl(env, '/memories'), {
-    method: 'POST',
-    headers: supabaseHeaders(env, { Prefer: 'return=representation' }),
-    body: JSON.stringify({
-      owner_id: entry.ownerId,
-      agent_id: entry.agentId,
-      content: entry.content,
-      embedding: entry.embedding,
-      tags: entry.tags,
-      source_tool: entry.sourceTool,
-    }),
-  });
+  const response = await safeFetch(
+    supabaseRestUrl(env, '/memories'),
+    {
+      method: 'POST',
+      headers: supabaseHeaders(env, { Prefer: 'return=representation' }),
+      body: JSON.stringify({
+        owner_id: entry.ownerId,
+        agent_id: entry.agentId,
+        content: entry.content,
+        embedding: entry.embedding,
+        tags: entry.tags,
+        source_tool: entry.sourceTool,
+      }),
+    },
+    { allowedHosts: SUPABASE_ALLOWED_HOSTS, timeoutMs: REQUEST_TIMEOUT_MS },
+  );
 
   if (!response.ok) {
     throw new Error(`Supabase insert failed with HTTP ${response.status}`);
@@ -76,16 +83,20 @@ async function callMatchMemories(
   ownerId: string,
   env: Env,
 ): Promise<MemoryMatch[]> {
-  const response = await fetch(supabaseRestUrl(env, '/rpc/match_memories'), {
-    method: 'POST',
-    headers: supabaseHeaders(env),
-    body: JSON.stringify({
-      query_embedding: embedding,
-      match_threshold: matchThreshold,
-      match_count: matchCount,
-      filter_owner_id: ownerId,
-    }),
-  });
+  const response = await safeFetch(
+    supabaseRestUrl(env, '/rpc/match_memories'),
+    {
+      method: 'POST',
+      headers: supabaseHeaders(env),
+      body: JSON.stringify({
+        query_embedding: embedding,
+        match_threshold: matchThreshold,
+        match_count: matchCount,
+        filter_owner_id: ownerId,
+      }),
+    },
+    { allowedHosts: SUPABASE_ALLOWED_HOSTS, timeoutMs: REQUEST_TIMEOUT_MS },
+  );
 
   if (!response.ok) {
     throw new Error(`Supabase match_memories failed with HTTP ${response.status}`);
@@ -117,13 +128,17 @@ export async function matchMemoriesLite(embedding: number[], opts: MatchLiteOpts
 }
 
 export async function pingKeepalive(env: Env): Promise<void> {
-  const response = await fetch(supabaseRestUrl(env, '/memories?select=id&limit=1'), {
-    method: 'GET',
-    headers: {
-      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+  const response = await safeFetch(
+    supabaseRestUrl(env, '/memories?select=id&limit=1'),
+    {
+      method: 'GET',
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
     },
-  });
+    { allowedHosts: SUPABASE_ALLOWED_HOSTS, timeoutMs: REQUEST_TIMEOUT_MS },
+  );
 
   if (!response.ok) {
     throw new Error(`Supabase keepalive ping failed with HTTP ${response.status}`);
