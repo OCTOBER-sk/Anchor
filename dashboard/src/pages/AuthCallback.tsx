@@ -49,7 +49,7 @@ export function AuthCallback() {
       setState({ phase: 'done', firstLogin: !onboardingCompleted });
     }
 
-    void exchange();
+    void exchange(code);
 
     return () => {
       cancelled = true;

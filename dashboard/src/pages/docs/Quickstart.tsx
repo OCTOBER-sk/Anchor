@@ -1,12 +1,7 @@
-import { UnderConstruction } from '../../components/UnderConstruction';
-
+/**
+ * Quickstart — frontend.md §3.7. The setup walkthrough lands in F3; this
+ * phase establishes the route and page heading inside the DocsLayout.
+ */
 export function Quickstart() {
-  return (
-    <div>
-      <h1 className="font-display font-semibold text-display-lg text-text-primary">Quickstart</h1>
-      <div className="mt-8">
-        <UnderConstruction phase="phase F3" />
-      </div>
-    </div>
-  );
+  return <h1 className="font-display font-semibold text-display-lg text-text-primary">Quickstart</h1>;
 }
