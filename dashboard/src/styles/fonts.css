@@ -1,0 +1,7 @@
+/* Anchor font loading — locked per frontend.md §2.2.
+ * Zodiak (display serif, 400/600) + Switzer (body sans, 400/500/600) from
+ * Fontshare; JetBrains Mono (code, 400) from Google Fonts.
+ * No other font families exist in the system. */
+
+@import url('https://api.fontshare.com/v2/css?f[]=zodiak@400,600&f[]=switzer@400,500,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&display=swap');

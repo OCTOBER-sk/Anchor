@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Anchor global styles.
+ * Tokens live in tailwind.config.ts (frontend.md §2.1). Component style
+ * rules per frontend.md §2.4. No gradients, no shadows, no dark mode.
+ */
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-bg-base text-text-primary font-body;
+  }
+
+  /* Zodiak is display-only: headlines and the wordmark, never body/UI text. */
+  h1,
+  h2,
+  h3 {
+    @apply font-display font-semibold text-text-primary;
+  }
+
+  ::selection {
+    background-color: #a8d4bc;
+    color: #1a1a18;
+  }
+}
+
+@layer components {
+  /* Cards — frontend.md §2.4: bg-raised, 1px border-default, 12px radius,
+   * no shadow at rest; hover shifts border to border-strong. */
+  .card {
+    @apply rounded-card bg-bg-raised border border-border-default;
+    box-shadow: none;
+  }
+
+  .card-hoverable {
+    @apply card transition-colors;
+  }
+
+  .card-hoverable:hover {
+    @apply border-border-strong;
+  }
+
+  /* Buttons — primary: accent fill, white text, accent-hover on hover;
+   * secondary: transparent fill, border-default, text-primary. 8px radius. */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-control font-body font-medium text-body-md px-5 py-3 transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-accent text-bg-base;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    @apply bg-accent-hover;
+  }
+
+  .btn-secondary {
+    @apply btn bg-transparent border border-border-default text-text-primary;
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    @apply border-border-strong bg-bg-sunken;
+  }
+
+  .btn-small {
+    @apply px-4 py-2.5 text-body-sm;
+  }
+
+  /* Inputs — bg-sunken, 1px border-default, 8px radius, focus ring = 2px
+   * border-accent outline. No glow, no shadow. */
+  .input {
+    @apply w-full rounded-control bg-bg-sunken border border-border-default px-4 py-3 text-body-md text-text-primary placeholder:text-text-tertiary;
+    outline: none;
+  }
+
+  .input:focus {
+    @apply border-accent;
+    box-shadow: 0 0 0 2px #a8d4bc;
+  }
+
+  /* Code blocks — always code-bg/code-text, JetBrains Mono, 8px radius. */
+  .code-block {
+    @apply rounded-control bg-code-bg text-code-text font-mono text-mono-md p-4 overflow-x-auto;
+  }
+
+  .code-inline {
+    @apply font-mono text-mono-md text-code-accent;
+  }
+}
+
+/* The 8px spacing rhythm (frontend.md §2.3) maps to Tailwind's default scale:
+ * p-1=4, p-2=8, p-3=12, p-4=16, p-6=24, p-8=32, p-12=48, p-16=64, p-24=96.
+ * No custom spacing tokens needed. */

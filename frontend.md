@@ -148,29 +148,87 @@ blend them within one text block.
   library dependency (hand-authored SVGs, keeps the "no paid icons"
   constraint trivially true and avoids generic icon-pack look).
 
+### 2.5 Product Surface Discipline (owner directive — non-negotiable)
+
+Anchor's frontend presents a **professional, finished product** — never a
+DIY/hobbyist surface. Two hard rules, applied everywhere (landing, dashboard,
+docs, error messages, meta tags, empty states):
+
+**Rule 1 — Zero tech-stack leakage.** Never mention, anywhere user-facing:
+Tavily, DuckDuckGo, Apify, Cerebras, Gemini, Supabase, Turso, Cloudflare,
+KV, pgvector, embeddings, "AI providers", model names, or any database/
+infrastructure vocabulary. Capabilities are described by *what they do*, never
+by *what powers them*. This includes: landing copy, dashboard copy, docs, tool
+descriptions inside the product, error strings surfaced to the UI, and HTML
+meta/OG tags. (Backend sanitization already guarantees error messages carry
+platform categories only — the frontend must extend that discipline to all of
+its own copy.)
+
+**Rule 2 — No immature wordings.** Banned anywhere in the UI: "Working…",
+"Under construction", "Coming soon" (unless genuinely dated), "Version x.y.z",
+"Beta", "prototype", "demo", "TODO", lorem/placeholder text, "not yet
+implemented", or any construction-state language. Every surface renders as if
+it shipped yesterday: real copy, proper empty states (§4.4), real loading
+states, zero placeholders. Shells during development must be visually clean —
+a page with no data shows its empty state, not a notice.
+
+**Surface doctrine**: the landing is a Decide/Learn surface (one idea per
+section — a hero is correct there); the dashboard is a Monitor surface
+(density, glanceable hierarchy — no hero, no marketing framing, no decorative
+stats); settings/onboarding are Configure surfaces (progressive disclosure,
+clear validation, low decoration). Never reach for the generic
+hero-plus-three-equal-cards composition outside the landing, and even there
+cards must be differentiated, not tiles.
+
+**Terminology dictionary** (single source, enforced everywhere): product is
+always "Anchor" (never "the app/platform/service"); "agent key" (never "API
+key"); "capability" for Search / Dev Search / Memory (never "tool" in
+user-facing copy — "tool" only inside /docs/api-reference where it mirrors
+the MCP protocol's own vocabulary); "runtime" for Claude Code, Cursor,
+OpenCode, Hermes, Antigravity; "connect a runtime"; Search / Dev Search /
+Memory as written (never "Search Tool", "Dev-Search Tool"). Voice: direct,
+editorial, unhyped — short declarative sentences, no exclamation points, no
+"supercharge"/"unlock"/"seamlessly" register.
+
 ---
 
 ## 3. Component Tree Per Page
 
-### 3.1 `/` (Landing)
+### 3.1 `/` (Landing — surface: Decide/Learn, pain-story composition)
+
+The landing tells the owner-approved story: **"Every session, you re-explain
+everything" → the 3-step fix → capabilities as real surfaces.** One idea per
+section, no marketing filler, no fake stats, no generic tile grid.
 
 ```
 LandingPage
-├─ NavBar (logo, "Docs" link, "Sign in" button)
-├─ Hero
-│   ├─ Headline (Zodiak display-xl: "The memory layer for your AI agents")
-│   ├─ Subhead (body-lg)
-│   └─ CTA button → /login
-├─ CapabilityGrid (exactly 3 CapabilityCard, no more)
-│   └─ CapabilityCard × 3 { icon, title, description, props: { name: 'search'|'devSearch'|'memory' } }
-├─ HowItWorks
-│   └─ StepRow × 3 (connect → configure → recall) — static illustration of
-│       the auto-recall differentiator, textual only, no live demo widget
-├─ RuntimeStrip
-│   └─ RuntimeBadge × 5 (Claude Code, Cursor, OpenCode, Hermes, Antigravity —
-│       logotype-free, text badges only, avoids third-party trademark art)
+├─ NavBar (wordmark, "Docs" link, "Sign in" button)
+├─ Hero — the pain, not the pitch
+│   ├─ Headline (Zodiak display-xl): "Every session, you re-explain everything."
+│   ├─ Subhead (body-lg): "Anchor remembers what your agents already know.
+│   │   Search, store, and recall context across every runtime."
+│   └─ CTA → /login ("Open dashboard")
+├─ HowItWorks — the 3-step fix (the story, not a feature grid)
+│   └─ StepRow × 3: 1 · Search — "Ask anything. Get answers — and what you
+│       already knew." 2 · It remembers — "What you learn is kept, so you
+│       never re-explain it." 3 · Any agent recalls — "Claude Code writes,
+│       OpenCode recalls. One memory, every runtime."
+├─ CapabilitySection — the 3 capabilities, presented as REAL surfaces, not
+│   equal-weight tiles. Each card shows its actual output flavor:
+│   ├─ CapabilityCard "Search" — web search with AI summaries; card shows a
+│   │   result-list mock (url + snippet + a related-memory line)
+│   ├─ CapabilityCard "Dev Search" — package-aware developer answers; card
+│   │   shows a registry-match mock (name + version + ecosystem)
+│   └─ CapabilityCard "Memory" — persistent, cross-runtime; card shows a
+│       memory-match mock (content + similarity)
+├─ RuntimeStrip — text badges × 5 (Claude Code, Cursor, OpenCode, Hermes,
+│   Antigravity; logotype-free — avoids third-party trademark art)
 └─ Footer (docs link, GitHub link if public, no social icons)
 ```
+
+Zero occurrences anywhere of: provider/database names (§2.5 Rule 1),
+"working/under construction/version" language (§2.5 Rule 2), fake metrics,
+testimonials, or decorative stats.
 
 ### 3.2 `/login`
 
@@ -610,9 +668,10 @@ any deploy.
 `src/styles/fonts.css` (Fontshare + Google Fonts `@import`), `src/main.tsx`,
 route scaffolding for all pages in §1 (empty shells).
 
-**Acceptance**: `npm run build` succeeds; every route in §1 renders an empty
-page with correct fonts/colors loaded (verified visually); zero console
-errors.
+**Acceptance**: `npm run build` succeeds; every route in §1 renders with
+correct fonts/colors loaded (verified visually); zero console errors; every
+shell renders a clean surface — proper empty states, NO "under construction"/
+placeholder notices (§2.5 Rule 2).
 
 ### Phase F2 — Auth
 
@@ -626,13 +685,18 @@ visit to `/login` redirects to `/dashboard`.
 
 ### Phase F3 — Landing & Docs (no auth needed)
 
-**Files**: `pages/Landing.tsx`, `components/CapabilityGrid.tsx`,
-`pages/docs/*`, `content/api-reference-data.ts` (structured data mirroring
-`backend.md` §8, consumed by `ApiReferencePage`).
+**Files**: `pages/Landing.tsx`, `components/CapabilitySection.tsx`,
+`content/landing-copy.ts` (all landing copy as data — pain-story hero,
+3-step HowItWorks, differentiated capability cards per §3.1),
+`content/api-reference-data.ts` (structured data mirroring `backend.md` §8,
+consumed by `ApiReferencePage`), `pages/docs/*`.
 
-**Acceptance**: landing renders exactly 3 capability cards; API reference
-page's schema tables match `backend.md` §8 field-for-field (manual diff
-check against the source doc).
+**Acceptance**: landing renders the §3.1 pain-story composition (hero →
+3-step fix → differentiated capability surfaces → runtime strip); API
+reference page's schema tables match `backend.md` §8 field-for-field (manual
+diff check against the source doc); zero tech-stack leakage and zero banned
+wordings per §2.5 (grep-checked); the 10-tell slop audit (§2.5 surface
+doctrine) scores ≤2 and is reported.
 
 ### Phase F4 — Dashboard Data Layer (depends on backend §4.1 endpoints existing)
 
@@ -677,8 +741,14 @@ confirm-gated; full self-review checklist (below) passes.
 
 - [ ] Exactly 3 capability blocks appear anywhere capabilities are listed
       (landing, dashboard, docs) — zero TTS/file-analysis remnants
-- [ ] All copy uses locked terminology (§6) — zero instances of "API key,"
-      "tool" (outside `/docs/api-reference`), or hype language
+- [ ] All copy uses locked terminology (§2.5 + §6) — zero instances of "API
+      key," "tool" (outside `/docs/api-reference`), or hype language
+- [ ] Zero tech-stack leakage per §2.5 Rule 1 (grep for provider/database
+      names across all UI copy, docs, error strings, and meta tags)
+- [ ] Zero immature wordings per §2.5 Rule 2 ("Working…", "Under
+      construction", "Version x.y.z", "Beta", placeholders — grep-checked)
+- [ ] Surface doctrine honored: dashboard is Monitor (no hero/marketing),
+      onboarding/settings are Configure, landing is Decide/Learn
 - [ ] Design tokens match §2.1 exactly — zero colors, gradients, or fonts
       outside the locked set; no dark-mode toggle exists
 - [ ] Zodiak used only for display headlines, never for body/UI text
@@ -760,3 +830,23 @@ warm honest copy. Contract changes to match:
   (editable; slug is not).
 - B7 (dashboard REST) and Midas's frontend work must implement §5A as
   specified — the old "show once and pray" flow is explicitly banned.
+
+## Appendix D: Product Surface Discipline (2026-08-09, owner directive)
+
+Owner directive for the entire frontend: it must read as a professional,
+finished product end-to-end, in sync with the MCP flow — clean terminology
+everywhere, and **no mention of the underlying tech stack** (providers,
+databases, models) anywhere user-facing, because that reads as cheap/DIY.
+Implemented as §2.5 (Product Surface Discipline): Rule 1 zero tech-stack
+leakage (banned: Tavily, DuckDuckGo, Apify, Cerebras, Gemini, Supabase,
+Turso, Cloudflare, KV, pgvector, embeddings, model names, infra vocabulary),
+Rule 2 no immature wordings (banned: "Working…", "Under construction",
+"Version x.y.z", "Beta", placeholders), a terminology dictionary, and a
+surface doctrine (landing = Decide/Learn, dashboard = Monitor, configure
+surfaces for settings/onboarding) derived from the design skills (claude-design
+10-tell slop audit; visual vocabulary closest to Notion's warm minimalism +
+Stripe's typographic confidence). Landing composition updated to the
+owner-approved pain story ("Every session, you re-explain everything" →
+3-step fix → differentiated capability surfaces). F1 shells must be clean
+empty states, never construction notices; F3 acceptance adds grep checks
+for leakage/banned wordings plus a reported slop-audit score (≤2).
