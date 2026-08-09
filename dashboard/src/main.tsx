@@ -6,9 +6,11 @@ import { DashboardShell } from './components/DashboardShell';
 import { AuthCallback } from './pages/AuthCallback';
 import { DashboardHome } from './pages/DashboardHome';
 import { DocsLayout } from './pages/docs/DocsLayout';
-import { Quickstart } from './pages/docs/Quickstart';
-import { ApiReference } from './pages/docs/ApiReference';
-import { Troubleshooting } from './pages/docs/Troubleshooting';
+import { DocsHomePage } from './pages/docs/DocsHomePage';
+import { QuickstartPage } from './pages/docs/QuickstartPage';
+import { CapabilityPage } from './pages/docs/CapabilityPage';
+import { ApiReferencePage } from './pages/docs/ApiReferencePage';
+import { TroubleshootingPage } from './pages/docs/TroubleshootingPage';
 import { Landing } from './pages/Landing';
 import { Login } from './pages/Login';
 import { OnboardingFlow } from './pages/OnboardingFlow';
@@ -37,10 +39,13 @@ const router = createBrowserRouter([
     path: '/docs',
     element: <DocsLayout />,
     children: [
-      { index: true, element: <Quickstart /> },
-      { path: 'quickstart', element: <Quickstart /> },
-      { path: 'api-reference', element: <ApiReference /> },
-      { path: 'troubleshooting', element: <Troubleshooting /> },
+      { index: true, element: <DocsHomePage /> },
+      { path: 'quickstart', element: <QuickstartPage /> },
+      { path: 'capabilities/search', element: <CapabilityPage /> },
+      { path: 'capabilities/dev-search', element: <CapabilityPage /> },
+      { path: 'capabilities/memory', element: <CapabilityPage /> },
+      { path: 'api-reference', element: <ApiReferencePage /> },
+      { path: 'troubleshooting', element: <TroubleshootingPage /> },
     ],
   },
 ]);

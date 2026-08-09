@@ -8,6 +8,7 @@ export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     colors: {
+      transparent: 'transparent',
       bg: {
         base: '#FAF8F4',
         raised: '#F4F1EB',
