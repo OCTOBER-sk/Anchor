@@ -3,6 +3,7 @@ import type { Context } from '../context';
 import { PlatformError } from '../utils/errors';
 import { handleSearch } from '../tools/search';
 import { handleDevSearch } from '../tools/devsearch';
+import { handleRemember, handleRecall } from '../tools/memory';
 import {
   SearchInputSchema,
   DevSearchInputSchema,
@@ -49,13 +50,13 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     name: 'anchor_remember',
     description: 'Store a persistent memory (with a semantic embedding) that any connected agent can recall later.',
     schema: RememberInputSchema,
-    handler: stubHandler('anchor_remember', 4),
+    handler: (args, ctx) => handleRemember(args as Parameters<typeof handleRemember>[0], ctx),
   },
   {
     name: 'anchor_recall',
     description: 'Query persistent vector memory for memories semantically similar to the given query.',
     schema: RecallInputSchema,
-    handler: stubHandler('anchor_recall', 4),
+    handler: (args, ctx) => handleRecall(args as Parameters<typeof handleRecall>[0], ctx),
   },
   {
     name: 'anchor_guide',

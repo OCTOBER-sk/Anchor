@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import type { Env } from '../src/context';
 import { handleRequest } from '../src/mcp/server';
 import { buildTestEnv, TEST_AGENT_KEY, mockSearchResult } from './test-utils';
@@ -8,6 +8,10 @@ vi.mock('../src/search/dev-router', () => ({
 }));
 
 import { runSearchPipeline } from '../src/search/dev-router';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 interface RpcError {
   code: number;
@@ -86,8 +90,35 @@ describe('tools/call argument validation', () => {
   });
 
   it('applies schema defaults for omitted optional fields', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes(':embedContent')) {
+        return new Response(JSON.stringify({ embedding: { values: new Array(768).fill(0.1) } }), { status: 200 });
+      }
+      if (url.includes('/rpc/match_memories')) {
+        return new Response(
+          JSON.stringify([
+            { id: 'mem-1', content: 'deployment notes', tags: [], similarity: 0.9, created_at: '2026-08-01T00:00:00Z' },
+          ]),
+          { status: 200 },
+        );
+      }
+      return new Response('not found', { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
     const res = await callTool('anchor_recall', { query: 'deployment notes' });
+
     expect(res.error).toBeUndefined();
-    expect(res.result?.content?.[0]?.text).toContain('anchor_recall');
+    const text = res.result?.content?.[0]?.text ?? '';
+    const parsed = JSON.parse(text) as { matches: unknown[]; _meta: Record<string, unknown> };
+    expect(parsed.matches).toHaveLength(1);
+    expect(parsed._meta).toMatchObject({ platform_category: 'memory' });
+
+    const rpcCall = fetchMock.mock.calls.find(([input]) => String(input).includes('/rpc/match_memories'));
+    expect(rpcCall).toBeDefined();
+    const body = JSON.parse(String(rpcCall?.[1]?.body)) as { match_threshold: number; match_count: number };
+    expect(body.match_threshold).toBe(0.75);
+    expect(body.match_count).toBe(10);
   });
 });

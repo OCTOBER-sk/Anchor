@@ -1,9 +1,9 @@
 import type { Context } from '../context';
 import { captureError } from '../utils/monitoring';
 import { complete } from './cerebras';
-import { generateContent } from './gemini';
+import { generateContent, embedText } from './gemini';
 
-export type AITaskType = 'summarize' | 'classify';
+export type AITaskType = 'summarize' | 'classify' | 'embed';
 export type AITaskCategory = 'search' | 'memory' | 'cache';
 
 export interface AIDispatchResult {
@@ -30,12 +30,25 @@ export class AIProviderError extends Error {
   }
 }
 
-const MAX_TOKENS_BY_TASK: Record<AITaskType, number> = {
+const MAX_TOKENS_BY_TASK: Record<Exclude<AITaskType, 'embed'>, number> = {
   summarize: 300,
   classify: 60,
 };
 
 export async function dispatchAI(task: AITaskType, input: string, ctx: Context): Promise<AIDispatchResult> {
+  if (task === 'embed') {
+    try {
+      const embedding = await embedText(input, ctx.env);
+      return { embedding, providerUsed: 'gemini', platformCategory: 'memory' };
+    } catch (embedErr) {
+      captureError('ai/router.ts::dispatchAI', embedErr, { task, stage: 'gemini', agentId: ctx.agentId });
+      throw new AIProviderError(`Embedding provider failed for task "${task}".`, {
+        provider: 'gemini',
+        cause: embedErr,
+      });
+    }
+  }
+
   const maxTokens = MAX_TOKENS_BY_TASK[task];
   try {
     const text = await complete(input, { maxTokens }, ctx.env);
