@@ -443,6 +443,20 @@ Response (200): `{ "id": string, "status": "revoked" }`
 404 (`AGENT_KEY_NOT_FOUND`) if the id doesn't belong to the caller's
 `owner_id`.
 
+**`PATCH /api/agent-keys/:id`**
+Renames an agent key (frontend.md §5A.1 — display name editable later; the
+slug embedded in the key string is NOT editable). Body:
+```
+{ "name": string }  // 2-60 chars, same validation as create
+```
+Response (200): `{ "id": string, "name": string, "slug": string }`
+Updates `name` in Turso + rewrites the KV agent record (same hash key —
+only the name field changes). 404 if the id isn't the caller's.
+
+**Note — `lastUsedAt`**: derived at read time in `listAgentKeys` via a
+`max(created_at)` subquery on the `requests` log table (per-agent), never
+stored as a live-updated column — the requests log is the source of truth.
+
 **`GET /api/usage/summary`**
 Response (200):
 ```
