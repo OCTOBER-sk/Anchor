@@ -20,6 +20,7 @@ export interface Env {
   CEREBRAS_API_KEY: string;
   GEMINI_API_KEY: string;
   TAVILY_API_KEY: string;
+  TAVILY_RESERVE_CREDITS?: string;
   APIFY_API_TOKEN: string;
   ALLOWED_ORIGINS?: string;
 }

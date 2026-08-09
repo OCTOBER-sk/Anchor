@@ -307,30 +307,32 @@ the MCP endpoint itself is reachable, independent of any specific key.
 **`POST /api/agent-keys`**
 Creates a new agent key. Body:
 ```
-{ "slug": string }  // e.g. "claudecode" — validated: lowercase, url-safe, 2-32 chars
+{ "name": string }  // free-form display name, 2-60 chars (see §5A.1) — slug derived server-side
 ```
 Response (200):
 ```
 {
   "id": string,
   "key": string,        // full raw key, anchor_<slug>_<hex> — returned ONLY on this call, never again
+  "name": string,
   "slug": string,
   "tier": "standard",
   "createdAt": string   // ISO
 }
 ```
 Server-side: generates via the same `auth/keys.ts::generateAgentKey`
-logic `backend.md` §4 already defines, writes to Turso (`createAgent`) and
-KV (per `backend.md`'s existing write-back-on-create behavior) — this
-endpoint is a thin HTTP wrapper over functions that already exist in the
-backend spec, not new key-generation logic.
+logic `backend.md` §4 already defines (slug auto-derived from name, URL-safe
+and deduped), writes to Turso (`createAgent`) and KV (per `backend.md`'s
+existing write-back-on-create behavior) — this endpoint is a thin HTTP
+wrapper over functions that already exist in the backend spec, not new
+key-generation logic.
 
 **`GET /api/agent-keys`**
 Response (200):
 ```
 {
   "keys": Array<{
-    id: string; slug: string; keyPrefix: string; // "anchor_claudecode_a1b2…" masked after 8 hex chars
+    id: string; name: string; slug: string; keyPrefix: string; // "anchor_claude…a1b2" masked after 8 hex chars
     tier: "standard" | "admin" | "debug";
     status: "active" | "revoked";
     createdAt: string; lastUsedAt: string | null;
@@ -499,6 +501,61 @@ button label flips to "Copied" for 2 seconds then reverts, no toast/modal
   blocks reaching `/dashboard`; onboarding is guidance, not a gate.
 
 ---
+
+## 5A. Key Management UX — Premium Standard (owner requirement)
+
+The previous product's key creation was: no naming freedom, key shown once
+with no flow around it. That is the bar we are explicitly beating. Every
+interaction below follows the GitHub/Stripe/Vercel key-management pattern —
+free-form naming, reveal-once with copy-confirm, and a hard gate before the
+raw key is gone for good.
+
+### 5A.1 Free-form naming
+
+- **Display name is required and free-form**: "Claude Code Laptop", "Cursor —
+  work", "backup phone". Any characters, 2-60 chars, validated client-side
+  (length + non-empty) and server-side.
+- **Slug is derived, not typed**: the `anchor_<slug>_<hex>` key string is
+  generated from the name — lowercase, URL-safe, deduped (append `-2`,
+  `-3` on collision). The user never sees or thinks about slugs.
+- **Name is editable later** in Settings (slug stays fixed — it is embedded
+  in the key string; only the display name changes).
+- `name` is stored on the agent record (backend addition, see §4.1) and
+  shown everywhere a key appears: list rows, activity feed, revoke
+  confirmations.
+
+### 5A.2 Creation flow — two-step modal
+
+1. **Step 1 — Name**: single input, live validation (2-60 chars), character
+   counter, helper microcopy ("Give this key a name you'll recognize —
+   e.g. 'Claude Code Laptop'"). Optional "Advanced" disclosure: tier
+   (standard/admin/debug) and per-key rate limits — defaulted, rarely
+   touched.
+2. **Step 2 — Reveal**: after create, the modal becomes a `KeyRevealCard`:
+   - Full key in monospace with a copy button ("Copied ✓" feedback for 2s).
+   - Warning banner in `status-warning`: "You won't be able to see this key
+     again after you close this window."
+   - Primary button: **"Done — I've stored it"**.
+   - **Close/dismiss without copying → confirm dialog**: "This key won't be
+     shown again. Copy it now?" (Keep viewing / Dismiss). This is the
+     premium gate — no accidental key loss.
+   - Raw key is never retrievable after this point (server enforces: raw key
+     returned only by `POST /api/agent-keys`; `GET` returns `keyPrefix`
+     only — per §4.1).
+
+### 5A.3 Key list rows (Dashboard + Settings)
+
+Each `AgentKeyRow` shows: **name** (Switzer 500), masked prefix chip
+(monospace: `anchor_claude…a1b2`), tier badge, status badge (active/revoked),
+**last used** ("2h ago", "3 days ago" — relative time), created date. Actions:
+Revoke (confirm modal naming the key + "runtimes using this key will lose
+access immediately") and Edit name (inline).
+
+### 5A.4 Copy standard
+
+Microcopy for keys is warm, precise, zero hype (per §6): no "unlock",
+"supercharge". The warning is honest and calm: "You won't be able to see
+this key again after you close this window."
 
 ## 6. Copy Guidelines (Locked Terminology)
 
@@ -686,3 +743,20 @@ Two non-blocking flags for the owner (decisions, not errors):
   implementation mechanism — suggested: existence of a `profiles` row for
   the session user (or a user-metadata flag set at end of onboarding).
   Implementation detail, not a spec gap.
+
+## Appendix C: Key Management UX Upgrade (2026-08-09, owner requirement)
+
+Owner directive: the previous product's key creation UX was the weakest
+surface (no naming freedom, key shown once with no flow). Added §5A
+(Key Management UX — Premium Standard) implementing the GitHub/Stripe/Vercel
+pattern: free-form display names (slug auto-derived), two-step create modal
+with reveal-once + copy-confirm + dismiss-gate, richer key list rows, and
+warm honest copy. Contract changes to match:
+
+- `POST /api/agent-keys` body: `{ "name" }` (2-60 chars) instead of
+  `{ "slug" }` — slug derived server-side (URL-safe, deduped).
+- `GET /api/agent-keys` and activity feed include `name`.
+- `backend.md` §6.2 `agents` table gains `name text not null default ''`
+  (editable; slug is not).
+- B7 (dashboard REST) and Midas's frontend work must implement §5A as
+  specified — the old "show once and pray" flow is explicitly banned.

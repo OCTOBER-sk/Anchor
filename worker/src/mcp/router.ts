@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import type { Context } from '../context';
 import { PlatformError } from '../utils/errors';
+import { handleSearch } from '../tools/search';
+import { handleDevSearch } from '../tools/devsearch';
 import {
   SearchInputSchema,
   DevSearchInputSchema,
@@ -35,13 +37,13 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     description:
       'Web search with AI summarization, dork operators, phantom-answer suppression, and automatic injection of related memories.',
     schema: SearchInputSchema,
-    handler: stubHandler('anchor_search', 3),
+    handler: (args, ctx) => handleSearch(args as Parameters<typeof handleSearch>[0], ctx),
   },
   {
     name: 'anchor_dev_search',
     description: 'Package-registry-aware developer search, biased toward your project manifest when supplied.',
     schema: DevSearchInputSchema,
-    handler: stubHandler('anchor_dev_search', 3),
+    handler: (args, ctx) => handleDevSearch(args as Parameters<typeof handleDevSearch>[0], ctx),
   },
   {
     name: 'anchor_remember',

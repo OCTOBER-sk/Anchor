@@ -1,4 +1,5 @@
-import type { AgentRecord, Env } from '../src/context';
+import type { AgentRecord, AgentTier, Context, Env } from '../src/context';
+import type { SearchResult } from '../src/search/dev-router';
 import { hashAgentKey } from '../src/auth/verify';
 
 export const TEST_AGENT_KEY = 'anchor_testagent_0123456789abcdef0123456789abcdef';
@@ -11,6 +12,42 @@ export const TEST_AGENT: AgentRecord = {
   status: 'active',
   rateLimits: { perMinute: 30, perDay: 500 },
 };
+
+export function buildTestContext(env: Env, overrides: Partial<Context> = {}): Context {
+  return {
+    env,
+    agentId: TEST_AGENT.id,
+    agentTier: TEST_AGENT.tier,
+    requestId: 'test-request-id',
+    ...overrides,
+  };
+}
+
+export function mockSearchResult(overrides: Partial<SearchResult> = {}): SearchResult {
+  return {
+    results: [
+      {
+        url: 'https://developers.cloudflare.com/workers/limits/',
+        title: 'Cloudflare Workers Limits',
+        snippet: 'A comprehensive guide to the Cloudflare Workers platform limits including CPU time and request quotas.',
+        domainPriority: 80,
+      },
+      {
+        url: 'https://blog.cloudflare.com/workers-cpu/',
+        title: 'CPU limits for Cloudflare Workers',
+        snippet: 'An overview of how CPU time is measured and enforced for Cloudflare Workers.',
+        domainPriority: 60,
+      },
+    ],
+    summary: 'Cloudflare Workers enforce strict CPU time limits per invocation.',
+    providerUsed: 'ddg',
+    ...overrides,
+  };
+}
+
+export function buildAgentRecord(overrides: Partial<AgentRecord> = {}): AgentRecord {
+  return { ...TEST_AGENT, ...overrides };
+}
 
 export interface MemoryKV {
   get: (key: string) => Promise<string | null>;

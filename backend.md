@@ -1138,7 +1138,8 @@ create policy "owner can insert own memories"
 create table if not exists agents (
   id                  text primary key,           -- uuid, generated at creation
   key_hash            text not null unique,        -- sha-256 of the full agent key; raw key is never stored
-  slug                text not null,
+  slug                text not null,               -- URL-safe identifier embedded in the key string (anchor_<slug>_<hex>)
+  name                text not null default '',    -- free-form display name (frontend spec §5A.1); editable later, slug is not
   owner_id            text not null,               -- ties to the same owner_id used in Supabase memories
   tier                text not null default 'standard' check (tier in ('standard', 'admin', 'debug')),
   rate_limit_per_min  integer not null default 30,

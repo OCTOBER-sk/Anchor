@@ -9,10 +9,16 @@ export interface RateLimitState {
 
 const RATE_LIMIT_KEY_PREFIX = 'ratelimit:';
 const TAVILY_BUDGET_KEY = 'tavily:budget:month';
+const APIFY_BUDGET_KEY = 'apify:budget:month';
 
 interface TavilyBudget {
   month: string;
   credits: number;
+}
+
+interface ApifyBudget {
+  month: string;
+  cents: number;
 }
 
 function currentMonth(): string {
@@ -102,6 +108,34 @@ export async function incrementTavilyBudgetCounter(delta: number, env: Env): Pro
     }
     budget.credits += delta;
     await env.RATE_LIMIT.put(TAVILY_BUDGET_KEY, JSON.stringify(budget));
+  } catch {
+    // no-op: KV outage must degrade gracefully
+  }
+}
+
+export async function getApifyBudgetCounter(env: Env): Promise<number> {
+  try {
+    const raw = await env.RATE_LIMIT.get(APIFY_BUDGET_KEY);
+    if (raw === null) {
+      return 0;
+    }
+    const budget = JSON.parse(raw) as ApifyBudget;
+    return budget.month === currentMonth() ? budget.cents : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function incrementApifyBudgetCounter(delta: number, env: Env): Promise<void> {
+  try {
+    const raw = await env.RATE_LIMIT.get(APIFY_BUDGET_KEY);
+    const budget: ApifyBudget = raw === null ? { month: currentMonth(), cents: 0 } : (JSON.parse(raw) as ApifyBudget);
+    if (budget.month !== currentMonth()) {
+      budget.month = currentMonth();
+      budget.cents = 0;
+    }
+    budget.cents += delta;
+    await env.RATE_LIMIT.put(APIFY_BUDGET_KEY, JSON.stringify(budget));
   } catch {
     // no-op: KV outage must degrade gracefully
   }

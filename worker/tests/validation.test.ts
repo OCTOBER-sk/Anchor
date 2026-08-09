@@ -1,7 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { Env } from '../src/context';
 import { handleRequest } from '../src/mcp/server';
-import { buildTestEnv, TEST_AGENT_KEY } from './test-utils';
+import { buildTestEnv, TEST_AGENT_KEY, mockSearchResult } from './test-utils';
+
+vi.mock('../src/search/dev-router', () => ({
+  runSearchPipeline: vi.fn(),
+}));
+
+import { runSearchPipeline } from '../src/search/dev-router';
 
 interface RpcError {
   code: number;
@@ -60,11 +66,23 @@ describe('tools/call argument validation', () => {
     expect(res.error?.data?.platformCode).toBe('INVALID_PARAMS');
   });
 
-  it('accepts valid arguments and returns a clearly-marked stub result', async () => {
+  it('accepts valid arguments and returns the §8 anchor_search output shape via the real handler', async () => {
+    vi.mocked(runSearchPipeline).mockResolvedValue(mockSearchResult());
+
     const res = await callTool('anchor_search', { query: 'cloudflare workers cpu limits' });
+
     expect(res.error).toBeUndefined();
-    expect(res.result?.content?.[0]?.text).toContain('anchor_search');
-    expect(res.result?.content?.[0]?.text).toContain('"stub": true');
+    const text = res.result?.content?.[0]?.text ?? '';
+    const parsed = JSON.parse(text) as {
+      results: unknown[];
+      summary: string;
+      related_memories: unknown[];
+      _meta: Record<string, unknown>;
+    };
+    expect(Array.isArray(parsed.results)).toBe(true);
+    expect(typeof parsed.summary).toBe('string');
+    expect(parsed.related_memories).toEqual([]);
+    expect(parsed._meta).toMatchObject({ platform_category: 'search', provider_used: 'search-primary' });
   });
 
   it('applies schema defaults for omitted optional fields', async () => {
