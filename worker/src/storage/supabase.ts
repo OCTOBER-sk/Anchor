@@ -23,6 +23,13 @@ export interface MatchOpts {
   matchCount: number;
 }
 
+export interface MatchLiteOpts {
+  ownerId: string;
+}
+
+const AUTO_RECALL_MATCH_THRESHOLD = 0.72;
+const AUTO_RECALL_MATCH_COUNT = 4;
+
 function supabaseRestUrl(env: Env, path: string): string {
   return `${env.SUPABASE_URL}/rest/v1${path}`;
 }
@@ -62,15 +69,21 @@ export async function writeMemory(entry: MemoryEntry, env: Env): Promise<{ id: s
   return { id: row.id };
 }
 
-export async function matchMemories(embedding: number[], opts: MatchOpts, env: Env): Promise<MemoryMatch[]> {
+async function callMatchMemories(
+  embedding: number[],
+  matchThreshold: number,
+  matchCount: number,
+  ownerId: string,
+  env: Env,
+): Promise<MemoryMatch[]> {
   const response = await fetch(supabaseRestUrl(env, '/rpc/match_memories'), {
     method: 'POST',
     headers: supabaseHeaders(env),
     body: JSON.stringify({
       query_embedding: embedding,
-      match_threshold: opts.matchThreshold,
-      match_count: opts.matchCount,
-      filter_owner_id: opts.ownerId,
+      match_threshold: matchThreshold,
+      match_count: matchCount,
+      filter_owner_id: ownerId,
     }),
   });
 
@@ -93,6 +106,14 @@ export async function matchMemories(embedding: number[], opts: MatchOpts, env: E
     similarity: Number(row.similarity),
     created_at: String(row.created_at),
   }));
+}
+
+export async function matchMemories(embedding: number[], opts: MatchOpts, env: Env): Promise<MemoryMatch[]> {
+  return callMatchMemories(embedding, opts.matchThreshold, opts.matchCount, opts.ownerId, env);
+}
+
+export async function matchMemoriesLite(embedding: number[], opts: MatchLiteOpts, env: Env): Promise<MemoryMatch[]> {
+  return callMatchMemories(embedding, AUTO_RECALL_MATCH_THRESHOLD, AUTO_RECALL_MATCH_COUNT, opts.ownerId, env);
 }
 
 export async function pingKeepalive(env: Env): Promise<void> {

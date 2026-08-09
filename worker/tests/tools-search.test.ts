@@ -8,13 +8,33 @@ vi.mock('../src/search/dev-router', () => ({
   runSearchPipeline: vi.fn(),
 }));
 
+vi.mock('../src/ai/gemini', () => ({
+  embedText: vi.fn(),
+  generateContent: vi.fn(),
+}));
+
+vi.mock('../src/storage/supabase', () => ({
+  matchMemoriesLite: vi.fn(),
+  writeMemory: vi.fn(),
+  matchMemories: vi.fn(),
+  pingKeepalive: vi.fn(),
+}));
+
+vi.mock('../src/utils/monitoring', () => ({
+  captureError: vi.fn(),
+}));
+
 import { runSearchPipeline } from '../src/search/dev-router';
+import { embedText } from '../src/ai/gemini';
+import { matchMemoriesLite } from '../src/storage/supabase';
 
 let ctx: Context;
 
 beforeEach(async () => {
-  vi.mocked(runSearchPipeline).mockReset();
+  vi.clearAllMocks();
   vi.mocked(runSearchPipeline).mockResolvedValue(mockSearchResult());
+  vi.mocked(embedText).mockResolvedValue(new Array<number>(768).fill(0.5));
+  vi.mocked(matchMemoriesLite).mockResolvedValue([]);
   ctx = buildTestContext(await buildTestEnv());
 });
 
