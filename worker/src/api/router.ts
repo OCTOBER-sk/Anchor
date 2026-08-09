@@ -7,6 +7,7 @@ import {
   createAgent,
   getAgentById,
   listAgentKeys,
+  renameAgent,
   revokeAgent,
   queryUsageSummary,
   queryActivity,
@@ -172,6 +173,42 @@ async function handleDeleteKey(request: Request, env: Env, keyId: string): Promi
   }
 }
 
+async function handlePatchKey(request: Request, env: Env, keyId: string): Promise<Response> {
+  const auth = await requireAuth(request, env);
+  if (auth instanceof Response) {
+    return auth;
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return apiError('VALIDATION_FAILED');
+  }
+
+  const name = nameFromBody(body);
+  if (name === null) {
+    return apiError('VALIDATION_FAILED', 'Agent key name must be 2-60 characters.');
+  }
+
+  // Only the display name is editable (§5A.1 / frontend.md §4.1); the slug
+  // embedded in the key string stays fixed, so we never re-derive it.
+  try {
+    const agent = await getAgentById(keyId, env);
+    if (agent === null || agent.ownerId !== auth.userId) {
+      return apiError('AGENT_KEY_NOT_FOUND');
+    }
+    const renamed = await renameAgent(keyId, name, env);
+    if (renamed === null) {
+      return apiError('AGENT_KEY_NOT_FOUND');
+    }
+    return apiOk({ id: keyId, name: renamed.name, slug: renamed.slug });
+  } catch (err) {
+    captureError('api/router.ts::handlePatchKey', err);
+    return apiError('INTERNAL_ERROR');
+  }
+}
+
 async function handleUsageSummary(request: Request, env: Env): Promise<Response> {
   const auth = await requireAuth(request, env);
   if (auth instanceof Response) {
@@ -261,6 +298,13 @@ export async function handleApi(request: Request, env: Env, pathname: string): P
         return apiError('VALIDATION_FAILED');
       }
       return handleDeleteKey(request, env, keyId);
+    }
+    if (request.method === 'PATCH' && pathname.startsWith('/api/agent-keys/')) {
+      const keyId = decodeURIComponent(pathname.slice('/api/agent-keys/'.length));
+      if (keyId.length === 0) {
+        return apiError('VALIDATION_FAILED');
+      }
+      return handlePatchKey(request, env, keyId);
     }
     if (request.method === 'GET' && pathname === '/api/usage/summary') {
       return handleUsageSummary(request, env);

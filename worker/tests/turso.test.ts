@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Client, ResultSet } from '@libsql/client/web';
 import { createClient } from '@libsql/client/web';
-import { lookupAgent, createAgent, listAgents, revokeAgent, slugify, deriveUniqueSlug, listAgentKeys, logRequest, queryUsageSummary, queryActivity } from '../src/storage/turso';
+import { lookupAgent, createAgent, listAgents, revokeAgent, renameAgent, slugify, deriveUniqueSlug, listAgentKeys, logRequest, queryUsageSummary, queryActivity } from '../src/storage/turso';
 import { buildTestEnv, TEST_AGENT, type MemoryKV } from './test-utils';
 
 vi.mock('@libsql/client/web', () => ({
@@ -246,6 +246,103 @@ describe('storage/turso', () => {
     expect(keys[0]?.rateLimitPerMin).toBe(30);
     expect(keys[0]?.createdAt).toBe('2026-08-09T00:00:00.000Z');
     expect(JSON.stringify(keys)).not.toContain('anchor_cursor_abcdef0123456789');
+  });
+
+  it('listAgentKeys derives lastUsedAt from the requests log (per-agent max)', async () => {
+    // The agents row carries a null last_used_at (never populated live);
+    // the subquery mock returns the most recent request timestamp per agent.
+    executeMock.mockResolvedValue(
+      resultSet([
+        {
+          id: 'a1',
+          key_hash: 'abcdef0123456789...',
+          slug: 'cursor',
+          name: 'Cursor',
+          tier: 'standard',
+          status: 'active',
+          created_at: '2026-08-09T00:00:00.000Z',
+          last_used_at: '2026-08-09T02:15:00.000Z',
+          rate_limit_per_min: 30,
+          rate_limit_per_day: 500,
+        },
+        {
+          id: 'a2',
+          key_hash: 'abcd00000000000000...',
+          slug: 'cli',
+          name: 'CLI',
+          tier: 'standard',
+          status: 'active',
+          created_at: '2026-08-09T01:00:00.000Z',
+          last_used_at: null,
+          rate_limit_per_min: 30,
+          rate_limit_per_day: 500,
+        },
+      ]),
+    );
+
+    const env = await buildTestEnv();
+    const keys = await listAgentKeys(env);
+
+    expect(keys[0]?.lastUsedAt).toBe('2026-08-09T02:15:00.000Z');
+    expect(keys[1]?.lastUsedAt).toBeNull();
+
+    const sql = executeMock.mock.calls[0]?.[0].sql as string;
+    expect(sql).toContain('requests');
+    expect(sql).toContain('max(r.created_at)');
+    expect(sql).toContain('agent_id = a.id');
+  });
+
+  it('listAgentKeys reports null lastUsedAt for agents with no request rows', async () => {
+    executeMock.mockResolvedValue(
+      resultSet([
+        {
+          id: 'a1',
+          key_hash: 'abcdef0123456789...',
+          slug: 'cursor',
+          name: 'Cursor',
+          tier: 'standard',
+          status: 'active',
+          created_at: '2026-08-09T00:00:00.000Z',
+          last_used_at: null,
+          rate_limit_per_min: 30,
+          rate_limit_per_day: 500,
+        },
+      ]),
+    );
+
+    const env = await buildTestEnv();
+    const keys = await listAgentKeys(env);
+
+    expect(keys[0]?.lastUsedAt).toBeNull();
+  });
+
+  it('renameAgent updates the name in Turso and rewrites the KV record under the same key hash', async () => {
+    const env = await buildTestEnv();
+    const agentKv = env.AGENT_KEYS as unknown as MemoryKV;
+    const hash = 'hash1';
+    executeMock
+      .mockResolvedValueOnce(resultSet([agentRow({ id: 'agent-1', name: 'Old Name' })]))
+      .mockResolvedValueOnce(resultSet());
+
+    const renamed = await renameAgent('agent-1', 'Claude Code Laptop', env);
+
+    expect(renamed).toMatchObject({ id: 'agent-1', slug: 'cli', name: 'Claude Code Laptop' });
+    const updateCall = executeMock.mock.calls[1]?.[0];
+    expect(updateCall).toMatchObject({
+      sql: expect.stringContaining('update agents set name = ?'),
+      args: ['Claude Code Laptop', 'agent-1'],
+    });
+    const cached = JSON.parse(agentKv.data.get(hash) ?? '{}');
+    expect(cached.name).toBe('Claude Code Laptop');
+    expect(cached.slug).toBe('cli');
+  });
+
+  it('renameAgent returns null when the agent does not exist', async () => {
+    executeMock.mockResolvedValue(resultSet());
+
+    const env = await buildTestEnv();
+    await expect(renameAgent('missing', 'New Name', env)).resolves.toBeNull();
+    expect(executeMock).toHaveBeenCalledTimes(1);
   });
 
   it('logRequest inserts a row and swallows database errors', async () => {

@@ -197,6 +197,29 @@ export async function createAgent(record: NewAgentRecord, env: Env): Promise<Age
   return agent;
 }
 
+// §5A.1 / frontend.md §4.1 PATCH /api/agent-keys/:id — renames the display
+// name in Turso and rewrites the KV agent record under the SAME key hash
+// (only the name field changes; slug embedded in the key string is fixed).
+export async function renameAgent(agentId: string, name: string, env: Env): Promise<AgentRecord | null> {
+  const client = makeClient(env);
+  const result = await client.execute({
+    sql: `select ${AGENT_COLUMNS} from agents where id = ? limit 1`,
+    args: [agentId],
+  });
+  if (result.rows.length === 0) {
+    return null;
+  }
+  const row = result.rows[0] as unknown as AgentRow;
+  const cached = await getAgentRecord(row.key_hash, env);
+  const updated: AgentRecord = { ...(cached ?? rowToAgentRecord(row)), name };
+  await client.execute({
+    sql: 'update agents set name = ? where id = ?',
+    args: [name, agentId],
+  });
+  await setAgentRecord(row.key_hash, updated, env);
+  return updated;
+}
+
 export async function getAgentById(agentId: string, env: Env): Promise<AgentRecord | null> {
   const client = makeClient(env);
   const result = await client.execute({
@@ -239,8 +262,14 @@ export async function revokeAgent(agentId: string, env: Env): Promise<void> {
 
 export async function listAgentKeys(env: Env): Promise<AgentKeyRow[]> {
   const client = makeClient(env);
+  // lastUsedAt is derived at read time from the append-only requests log
+  // (frontend.md §4.1) — the agents.last_used_at column is never populated
+  // live. Only the name field is edited via PATCH; slug and key_hash are fixed.
   const result = await client.execute({
-    sql: 'select id, key_hash, slug, name, tier, status, created_at, last_used_at, rate_limit_per_min, rate_limit_per_day from agents order by created_at desc',
+    sql: `select a.id, a.key_hash, a.slug, a.name, a.tier, a.status, a.created_at,
+             (select max(r.created_at) from requests r where r.agent_id = a.id) as last_used_at,
+             a.rate_limit_per_min, a.rate_limit_per_day
+          from agents a order by a.created_at desc`,
   });
   return result.rows.map((row) => {
     const r = row as unknown as {

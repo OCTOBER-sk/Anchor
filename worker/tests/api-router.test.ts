@@ -7,6 +7,7 @@ vi.mock('../src/storage/turso', () => ({
   createAgent: vi.fn(),
   getAgentById: vi.fn(),
   listAgentKeys: vi.fn(),
+  renameAgent: vi.fn(),
   revokeAgent: vi.fn(),
   queryUsageSummary: vi.fn(),
   queryActivity: vi.fn(),
@@ -21,6 +22,7 @@ const deriveUniqueSlugMock = vi.mocked(turso.deriveUniqueSlug);
 const createAgentMock = vi.mocked(turso.createAgent);
 const getAgentByIdMock = vi.mocked(turso.getAgentById);
 const listAgentKeysMock = vi.mocked(turso.listAgentKeys);
+const renameAgentMock = vi.mocked(turso.renameAgent);
 const revokeAgentMock = vi.mocked(turso.revokeAgent);
 const queryUsageSummaryMock = vi.mocked(turso.queryUsageSummary);
 const queryActivityMock = vi.mocked(turso.queryActivity);
@@ -219,6 +221,68 @@ describe('api router — agent keys', () => {
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toEqual({ error: { code: 'AGENT_KEY_NOT_FOUND', message: 'Agent key not found.' } });
     expect(revokeAgentMock).not.toHaveBeenCalled();
+  });
+
+  it('PATCH /api/agent-keys/:id renames an agent key for the caller', async () => {
+    const env: Env = await buildTestEnv();
+    getAgentByIdMock.mockResolvedValue(buildAgent({ id: 'key-1', name: 'Old Name' }));
+    renameAgentMock.mockResolvedValue({ ...buildAgent({ id: 'key-1', name: 'Claude Code Laptop' }) });
+
+    const request = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys/key-1', {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ name: 'Claude Code Laptop' }),
+    });
+    const response = await handleApi(request, env, '/api/agent-keys/key-1');
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ id: 'key-1', name: 'Claude Code Laptop', slug: 'testagent' });
+    expect(renameAgentMock).toHaveBeenCalledWith('key-1', 'Claude Code Laptop', env);
+  });
+
+  it('PATCH /api/agent-keys/:id returns 404 AGENT_KEY_NOT_FOUND for a foreign id', async () => {
+    const env: Env = await buildTestEnv();
+    getAgentByIdMock.mockResolvedValue(buildAgent({ id: 'key-2', ownerId: 'someone-else' }));
+
+    const request = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys/key-2', {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ name: 'Renamed' }),
+    });
+    const response = await handleApi(request, env, '/api/agent-keys/key-2');
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({ error: { code: 'AGENT_KEY_NOT_FOUND', message: 'Agent key not found.' } });
+    expect(renameAgentMock).not.toHaveBeenCalled();
+  });
+
+  it('PATCH /api/agent-keys/:id returns 422 VALIDATION_FAILED for a short name', async () => {
+    const env: Env = await buildTestEnv();
+
+    const request = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys/key-1', {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ name: 'X' }),
+    });
+    const response = await handleApi(request, env, '/api/agent-keys/key-1');
+
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toEqual({ error: { code: 'VALIDATION_FAILED', message: 'Agent key name must be 2-60 characters.' } });
+    expect(renameAgentMock).not.toHaveBeenCalled();
+  });
+
+  it('PATCH /api/agent-keys/:id returns 422 VALIDATION_FAILED for a long name', async () => {
+    const env: Env = await buildTestEnv();
+
+    const request = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys/key-1', {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ name: 'a'.repeat(61) }),
+    });
+    const response = await handleApi(request, env, '/api/agent-keys/key-1');
+
+    expect(response.status).toBe(422);
+    expect(renameAgentMock).not.toHaveBeenCalled();
   });
 });
 

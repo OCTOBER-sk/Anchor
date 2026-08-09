@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { createAgentKey, fetchAgentKeys, revokeAgentKey } from '../lib/api';
+import { createAgentKey, fetchAgentKeys, renameAgentKey, revokeAgentKey } from '../lib/api';
 import type { AgentKey, CreatedAgentKey } from '../lib/api';
 
 export interface UseAgentKeysResult {
@@ -12,6 +12,8 @@ export interface UseAgentKeysResult {
   createKey: (name: string) => Promise<CreatedAgentKey>;
   /** DELETE — optimistic `status: 'revoked'` with rollback on failure. */
   revokeKey: (id: string) => Promise<void>;
+  /** PATCH — optimistic rename (display name only, slug is fixed) with rollback on failure. */
+  renameKey: (id: string, name: string) => Promise<void>;
 }
 
 /**
@@ -64,5 +66,24 @@ export function useAgentKeys(): UseAgentKeysResult {
     [data],
   );
 
-  return { data, isLoading, error, refetch, createKey, revokeKey };
+  const renameKey = useCallback(
+    async (id: string, name: string): Promise<void> => {
+      const previous = data;
+      setData((current) =>
+        current === null ? current : current.map((key) => (key.id === id ? { ...key, name } : key)),
+      );
+      setError(null);
+      try {
+        await renameAgentKey(id, name);
+      } catch (err) {
+        // Roll back to the last authoritative name (the snapshot holds the
+        // pre-edit value) rather than leaving a stale display name in place.
+        setData(previous);
+        throw err;
+      }
+    },
+    [data],
+  );
+
+  return { data, isLoading, error, refetch, createKey, revokeKey, renameKey };
 }

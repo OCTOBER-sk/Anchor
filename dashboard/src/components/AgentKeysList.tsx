@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useAgentKeys } from '../hooks/useAgentKeys';
@@ -21,20 +21,108 @@ function KeyIcon() {
   );
 }
 
+const MIN_NAME_LENGTH = 2;
+const MAX_NAME_LENGTH = 60;
+
 function AgentKeyRow({
   agentKey,
   onRevoke,
+  onRename,
 }: {
   agentKey: AgentKey;
   onRevoke: (key: AgentKey) => void;
+  onRename: (id: string, name: string) => Promise<void>;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(agentKey.name);
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+    }
+  }, [editing]);
+
+  const trimmedName = name.trim();
+  const nameTooError = trimmedName.length < MIN_NAME_LENGTH || name.length > MAX_NAME_LENGTH;
+
+  function startEditing() {
+    setName(agentKey.name);
+    setRenameError(null);
+    setEditing(true);
+  }
+
+  function cancelEditing() {
+    setEditing(false);
+    setRenameError(null);
+  }
+
+  async function save() {
+    const finalName = name.trim();
+    if (nameTooError || finalName === agentKey.name || isRenaming) {
+      if (finalName === agentKey.name) cancelEditing();
+      return;
+    }
+    setIsRenaming(true);
+    setRenameError(null);
+    try {
+      await onRename(agentKey.id, finalName);
+      setEditing(false);
+    } catch (err) {
+      setRenameError(err instanceof Error ? err.message : 'Could not rename the agent key. Please try again.');
+    } finally {
+      setIsRenaming(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="truncate text-body-md font-medium text-text-primary">{agentKey.name}</span>
-          <StatusBadge status={agentKey.status} />
-        </div>
+        {editing ? (
+          <div className="max-w-sm">
+            <input
+              ref={inputRef}
+              type="text"
+              autoComplete="off"
+              maxLength={MAX_NAME_LENGTH}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  void save();
+                } else if (event.key === 'Escape') {
+                  cancelEditing();
+                }
+              }}
+              onBlur={() => {
+                if (!isRenaming) void save();
+              }}
+              className={`input px-3 py-1.5 text-body-md ${renameError ? 'border-status-error' : ''}`}
+              aria-label="Agent key name"
+            />
+            <div className="mt-1 flex items-center justify-between gap-2">
+              <p className="text-body-sm text-status-error">
+                {renameError ??
+                  (trimmedName.length < MIN_NAME_LENGTH
+                    ? 'At least two characters.'
+                    : name.length > MAX_NAME_LENGTH
+                      ? 'Keep it under 60 characters.'
+                      : null)}
+              </p>
+              <p className="font-mono text-mono-sm text-text-tertiary">
+                {name.length}/{MAX_NAME_LENGTH}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="truncate text-body-md font-medium text-text-primary">{agentKey.name}</span>
+            <StatusBadge status={agentKey.status} />
+          </div>
+        )}
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
           <code className="font-mono text-mono-sm text-text-tertiary">{agentKey.keyPrefix}</code>
           <TierBadge tier={agentKey.tier} />
@@ -44,11 +132,16 @@ function AgentKeyRow({
           <span className="text-body-sm text-text-tertiary">Created {formatShortDate(agentKey.createdAt)}</span>
         </div>
       </div>
-      <div className="shrink-0">
+      <div className="flex shrink-0 items-center gap-3">
+        {!editing ? (
+          <button type="button" onClick={startEditing} className="text-body-sm font-medium text-accent hover:text-accent-hover">
+            Edit name
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={() => onRevoke(agentKey)}
-          disabled={agentKey.status !== 'active'}
+          disabled={agentKey.status !== 'active' || editing}
           className="btn-secondary btn-small disabled:cursor-not-allowed disabled:opacity-40"
         >
           Revoke
@@ -110,7 +203,7 @@ function RevokeConfirmModal({
  * Empty state drives new users into onboarding.
  */
 export function AgentKeysList() {
-  const { data, isLoading, error, refetch, createKey, revokeKey } = useAgentKeys();
+  const { data, isLoading, error, refetch, createKey, revokeKey, renameKey } = useAgentKeys();
   const [modalOpen, setModalOpen] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<AgentKey | null>(null);
   const [revokeError, setRevokeError] = useState<string | null>(null);
@@ -170,7 +263,7 @@ export function AgentKeysList() {
         ) : data !== null ? (
           <div className="card divide-y divide-border-default">
             {data.map((agentKey) => (
-              <AgentKeyRow key={agentKey.id} agentKey={agentKey} onRevoke={setRevokeTarget} />
+              <AgentKeyRow key={agentKey.id} agentKey={agentKey} onRevoke={setRevokeTarget} onRename={renameKey} />
             ))}
           </div>
         ) : null}

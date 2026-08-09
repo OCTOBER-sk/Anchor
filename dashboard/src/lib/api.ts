@@ -69,7 +69,7 @@ function toApiError(status: number, body: unknown): ApiError {
 }
 
 interface RequestOptions {
-  method?: 'GET' | 'POST' | 'DELETE';
+  method?: 'GET' | 'POST' | 'DELETE' | 'PATCH';
   body?: unknown;
 }
 
@@ -203,6 +203,11 @@ export async function fetchAgentKeys(): Promise<AgentKey[]> {
 
 export async function revokeAgentKey(id: string): Promise<void> {
   await request(`/agent-keys/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+/** PATCH /api/agent-keys/:id — rename the display name (slug is fixed). */
+export async function renameAgentKey(id: string, name: string): Promise<{ id: string; name: string; slug: string }> {
+  return request(`/agent-keys/${encodeURIComponent(id)}`, { method: 'PATCH', body: { name } });
 }
 
 export async function fetchUsageSummary(): Promise<UsageSummary> {
