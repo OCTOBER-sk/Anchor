@@ -1,11 +1,12 @@
-import type { Session } from '@supabase/supabase-js';
+import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 
-import { supabase } from '../lib/supabase';
+import { getSupabase } from '../lib/supabase';
 
 export interface UseSessionResult {
   session: Session | null;
   loading: boolean;
+  error: Error | null;
 }
 
 /**
@@ -13,13 +14,28 @@ export interface UseSessionResult {
  * `loading` is true until the initial session resolution completes — the
  * DashboardShell gates on this so it never flashes a redirect before Supabase
  * has answered.
+ *
+ * The client is obtained lazily inside the effect, so an unconfigured
+ * environment surfaces as a clean `error` state rather than a module-load
+ * crash. Consumers render the config-missing state on `error`.
  */
 export function useSession(): UseSessionResult {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     let mounted = true;
+    let supabase: SupabaseClient;
+
+    try {
+      supabase = getSupabase();
+    } catch (err) {
+      if (!mounted) return;
+      setError(err instanceof Error ? err : new Error('Configuration error'));
+      setLoading(false);
+      return;
+    }
 
     void supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
@@ -41,5 +57,5 @@ export function useSession(): UseSessionResult {
     };
   }, []);
 
-  return { session, loading };
+  return { session, loading, error };
 }

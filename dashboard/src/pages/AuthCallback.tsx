@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 
-import { supabase } from '../lib/supabase';
+import { ConfigMissingState } from '../components/ConfigMissingState';
+import { getSupabase } from '../lib/supabase';
 
 type CallbackState =
   | { phase: 'exchanging' }
@@ -23,6 +24,7 @@ export function AuthCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [state, setState] = useState<CallbackState>({ phase: 'exchanging' });
+  const [configMissing, setConfigMissing] = useState(false);
 
   useEffect(() => {
     const code = searchParams.get('code');
@@ -35,6 +37,15 @@ export function AuthCallback() {
     let cancelled = false;
 
     async function exchange(linkCode: string) {
+      let supabase;
+      try {
+        supabase = getSupabase();
+      } catch {
+        if (cancelled) return;
+        setConfigMissing(true);
+        return;
+      }
+
       const { data, error } = await supabase.auth.exchangeCodeForSession(linkCode);
 
       if (cancelled) return;
@@ -63,6 +74,10 @@ export function AuthCallback() {
     }, 250);
     return () => window.clearTimeout(timer);
   }, [state, navigate]);
+
+  if (configMissing) {
+    return <ConfigMissingState />;
+  }
 
   if (state.phase === 'error') {
     return <Navigate to="/login" replace />;

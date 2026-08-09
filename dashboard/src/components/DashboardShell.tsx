@@ -2,7 +2,8 @@ import { useRef, useState } from 'react';
 import { Link, NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 
 import { useSession } from '../hooks/useSession';
-import { supabase } from '../lib/supabase';
+import { getSupabase } from '../lib/supabase';
+import { ConfigMissingState } from './ConfigMissingState';
 
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Home', end: true },
@@ -63,7 +64,12 @@ function UserMenu({ email }: { email: string }) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   async function handleSignOut() {
-    await supabase.auth.signOut();
+    try {
+      await getSupabase().auth.signOut();
+    } catch {
+      // Configuration failure surfaces upstream as the clean config-missing
+      // state; there is nothing left to sign out of here.
+    }
     setOpen(false);
   }
 
@@ -109,9 +115,13 @@ function UserMenu({ email }: { email: string }) {
  * No session → redirect to /login. Renders sidebar + topbar around <Outlet/>.
  */
 export function DashboardShell() {
-  const { session, loading } = useSession();
+  const { session, loading, error } = useSession();
   const location = useLocation();
   const pageTitle = PAGE_TITLES[location.pathname] ?? 'Dashboard';
+
+  if (error) {
+    return <ConfigMissingState />;
+  }
 
   if (loading) {
     return (

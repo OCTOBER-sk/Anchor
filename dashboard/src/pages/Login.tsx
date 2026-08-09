@@ -1,17 +1,22 @@
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 
+import { ConfigMissingState } from '../components/ConfigMissingState';
 import { useSession } from '../hooks/useSession';
-import { supabase } from '../lib/supabase';
+import { getSupabase } from '../lib/supabase';
 
 type Status = 'idle' | 'sent' | 'error';
 
 export function Login() {
-  const { session, loading: sessionLoading } = useSession();
+  const { session, loading: sessionLoading, error: sessionError } = useSession();
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<Status>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  if (sessionError) {
+    return <ConfigMissingState />;
+  }
 
   if (!sessionLoading && session) {
     return <Navigate to="/dashboard" replace />;
@@ -24,6 +29,16 @@ export function Login() {
     setSubmitting(true);
     setStatus('idle');
     setErrorMessage(null);
+
+    let supabase;
+    try {
+      supabase = getSupabase();
+    } catch {
+      setSubmitting(false);
+      setErrorMessage(null);
+      setStatus('error');
+      return;
+    }
 
     const { error } = await supabase.auth.signInWithOtp({ email });
 
