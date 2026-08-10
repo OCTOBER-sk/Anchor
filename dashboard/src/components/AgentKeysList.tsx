@@ -214,7 +214,7 @@ function AgentKeyRow({
         </div>
       ) : isLegacy ? (
         <p className="mt-4 text-body-sm text-text-tertiary">
-          Key not available — this legacy key was created before keys could be re-viewed.
+          This key was created before keys could be re-viewed, so it can&apos;t be shown again. Create a new key and revoke this one to move forward.
         </p>
       ) : revealError ? (
         <p className="mt-4 text-body-sm text-status-error" role="alert">

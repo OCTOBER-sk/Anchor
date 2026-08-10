@@ -290,7 +290,7 @@ describe('storage/turso', () => {
     );
 
     const env = await buildTestEnv();
-    const keys = await listAgentKeys(env);
+    const keys = await listAgentKeys('anchor-owner', env);
 
     expect(keys).toHaveLength(1);
     expect(keys[0]?.name).toBe('Cursor');
@@ -333,7 +333,7 @@ describe('storage/turso', () => {
     );
 
     const env = await buildTestEnv();
-    const keys = await listAgentKeys(env);
+    const keys = await listAgentKeys('anchor-owner', env);
 
     expect(keys[0]?.lastUsedAt).toBe('2026-08-09T02:15:00.000Z');
     expect(keys[1]?.lastUsedAt).toBeNull();
@@ -363,7 +363,7 @@ describe('storage/turso', () => {
     );
 
     const env = await buildTestEnv();
-    const keys = await listAgentKeys(env);
+    const keys = await listAgentKeys('anchor-owner', env);
 
     expect(keys[0]?.lastUsedAt).toBeNull();
   });
@@ -435,7 +435,7 @@ describe('storage/turso', () => {
       );
 
     const env = await buildTestEnv();
-    const summary = await queryUsageSummary(env);
+    const summary = await queryUsageSummary('anchor-owner', env);
 
     expect(summary.requestsToday).toBe(4);
     expect(summary.requestsThisMonth).toBe(5);
@@ -470,7 +470,7 @@ describe('storage/turso', () => {
     );
 
     const env = await buildTestEnv();
-    const items = await queryActivity(20, env);
+    const items = await queryActivity('anchor-owner', 20, env);
 
     expect(items).toHaveLength(2);
     expect(items[0]).toEqual({
@@ -484,6 +484,6 @@ describe('storage/turso', () => {
     });
     expect(items[1]?.errorCode).toBeUndefined();
     expect(items[1]?.agentSlug).toBe('');
-    expect(executeMock.mock.calls[0]?.[0].args).toEqual([20]);
+    expect(executeMock.mock.calls[0]?.[0].args).toEqual(['anchor-owner', 20]);
   });
 });

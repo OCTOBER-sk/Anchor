@@ -32,7 +32,9 @@ const queryUsageSummaryMock = vi.mocked(turso.queryUsageSummary);
 const queryActivityMock = vi.mocked(turso.queryActivity);
 
 const VALID_TOKEN = 'supabase-jwt-token';
+const VALID_TOKEN_2 = 'supabase-jwt-token-2';
 const userId = 'dash-user-1';
+const userId2 = 'dash-user-2';
 
 function authHeaders(extra: Record<string, string> = {}): Record<string, string> {
   return { Authorization: `Bearer ${VALID_TOKEN}`, 'Content-Type': 'application/json', ...extra };
@@ -65,6 +67,9 @@ beforeEach(() => {
     if (url.includes('/auth/v1/user')) {
       if (token === VALID_TOKEN) {
         return new Response(JSON.stringify({ id: userId, email: 'dev@example.com' }), { status: 200 });
+      }
+      if (token === VALID_TOKEN_2) {
+        return new Response(JSON.stringify({ id: userId2, email: 'other@example.com' }), { status: 200 });
       }
       return new Response(JSON.stringify({ error: 'invalid token' }), { status: 401 });
     }
@@ -259,6 +264,47 @@ describe('api router — agent keys', () => {
     expect(body.keys[0]?.keyPrefix).toBe(`anchor_cursor_${baseSecret.slice(0, 8)}…`);
     expect(body.keys[0]?.key).toBeUndefined();
     expect(JSON.stringify(body)).not.toContain(baseSecret);
+    expect(listAgentKeysMock).toHaveBeenCalledWith(userId, env);
+  });
+
+  it('GET /api/agent-keys passes the authenticated user id as the owner filter', async () => {
+    const env: Env = await buildTestEnv();
+    listAgentKeysMock.mockResolvedValue([]);
+
+    const request = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${VALID_TOKEN_2}`, 'Content-Type': 'application/json' },
+    });
+    const response = await handleApi(request, env, '/api/agent-keys');
+
+    expect(response.status).toBe(200);
+    expect(listAgentKeysMock).toHaveBeenCalledWith(userId2, env);
+  });
+
+  it('GET /api/agent-keys returns only the calling account\u2019s keys', async () => {
+    const env: Env = await buildTestEnv();
+    // The mock storage returns different key sets per owner, simulating two
+    // accounts; the route must forward the caller\u2019s id so each account
+    // only ever sees its own keys.
+    listAgentKeysMock.mockImplementation((ownerId: string) =>
+      Promise.resolve(
+        ownerId === userId
+          ? [{ id: 'key-1', name: 'A', slug: 'a', keyPrefix: 'anchor_a_aaaa…', tier: 'standard', status: 'active', createdAt: '2026-08-09T00:00:00.000Z', lastUsedAt: null, rateLimitPerMin: 30, rateLimitPerDay: 500 }]
+          : [{ id: 'key-2', name: 'B', slug: 'b', keyPrefix: 'anchor_b_bbbb…', tier: 'standard', status: 'active', createdAt: '2026-08-09T00:00:00.000Z', lastUsedAt: null, rateLimitPerMin: 30, rateLimitPerDay: 500 }],
+      ),
+    );
+
+    const reqA = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys', { headers: authHeaders() });
+    const resA = await handleApi(reqA, env, '/api/agent-keys');
+    const bodyA = (await resA.json()) as { keys: Array<{ id: string }> };
+    expect(bodyA.keys.map((k) => k.id)).toEqual(['key-1']);
+
+    const reqB = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys', {
+      headers: { Authorization: `Bearer ${VALID_TOKEN_2}`, 'Content-Type': 'application/json' },
+    });
+    const resB = await handleApi(reqB, env, '/api/agent-keys');
+    const bodyB = (await resB.json()) as { keys: Array<{ id: string }> };
+    expect(bodyB.keys.map((k) => k.id)).toEqual(['key-2']);
   });
 
   it('DELETE /api/agent-keys/:id revokes a key for the caller', async () => {
@@ -511,6 +557,39 @@ describe('api router — usage', () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual(summary);
+    expect(queryUsageSummaryMock).toHaveBeenCalledWith(userId, env);
+  });
+
+  it('GET /api/usage/summary is scoped to the authenticated user\u2019s requests and keys', async () => {
+    const env: Env = await buildTestEnv();
+    queryUsageSummaryMock.mockImplementation((ownerId: string) =>
+      Promise.resolve({
+        requestsToday: ownerId === userId ? 7 : 2,
+        requestsThisMonth: ownerId === userId ? 30 : 5,
+        activeKeyCount: ownerId === userId ? 4 : 1,
+        byCapability: {
+          search: { count: ownerId === userId ? 10 : 1, lastUsedAt: null },
+          devSearch: { count: 0, lastUsedAt: null },
+          memory: { count: 0, lastUsedAt: null },
+        },
+      }),
+    );
+
+    const reqA = new Request('https://anchor-mcp.test.workers.dev/api/usage/summary', { headers: authHeaders() });
+    const resA = await handleApi(reqA, env, '/api/usage/summary');
+    const bodyA = (await resA.json()) as { requestsToday: number; activeKeyCount: number };
+    expect(bodyA.requestsToday).toBe(7);
+    expect(bodyA.activeKeyCount).toBe(4);
+    expect(queryUsageSummaryMock).toHaveBeenCalledWith(userId, env);
+
+    const reqB = new Request('https://anchor-mcp.test.workers.dev/api/usage/summary', {
+      headers: { Authorization: `Bearer ${VALID_TOKEN_2}`, 'Content-Type': 'application/json' },
+    });
+    const resB = await handleApi(reqB, env, '/api/usage/summary');
+    const bodyB = (await resB.json()) as { requestsToday: number; activeKeyCount: number };
+    expect(bodyB.requestsToday).toBe(2);
+    expect(bodyB.activeKeyCount).toBe(1);
+    expect(queryUsageSummaryMock).toHaveBeenCalledWith(userId2, env);
   });
 
   it('GET /api/usage/activity returns items and honors the limit parameter', async () => {
@@ -540,7 +619,32 @@ describe('api router — usage', () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as { items: unknown[] };
     expect(body.items).toHaveLength(1);
-    expect(queryActivityMock).toHaveBeenCalledWith(1, env);
+    expect(queryActivityMock).toHaveBeenCalledWith(userId, 1, env);
+  });
+
+  it('GET /api/usage/activity is scoped to the authenticated user\u2019s requests', async () => {
+    const env: Env = await buildTestEnv();
+    queryActivityMock.mockImplementation((ownerId: string) =>
+      Promise.resolve(
+        ownerId === userId
+          ? [{ id: 'r1', tool: 'anchor_search', status: 'success', latencyMs: 20, createdAt: '2026-08-09T00:00:00Z', agentSlug: 'cursor' }]
+          : [{ id: 'r9', tool: 'anchor_guide', status: 'success', latencyMs: 3, createdAt: '2026-08-09T00:00:00Z', agentSlug: 'other' }],
+      ),
+    );
+
+    const reqA = new Request('https://anchor-mcp.test.workers.dev/api/usage/activity', { headers: authHeaders() });
+    const resA = await handleApi(reqA, env, '/api/usage/activity');
+    const bodyA = (await resA.json()) as { items: Array<{ id: string; agentSlug: string }> };
+    expect(bodyA.items).toEqual([{ id: 'r1', agentSlug: 'cursor', tool: 'anchor_search', status: 'success', latencyMs: 20, createdAt: '2026-08-09T00:00:00Z' }]);
+    expect(queryActivityMock).toHaveBeenCalledWith(userId, 20, env);
+
+    const reqB = new Request('https://anchor-mcp.test.workers.dev/api/usage/activity', {
+      headers: { Authorization: `Bearer ${VALID_TOKEN_2}`, 'Content-Type': 'application/json' },
+    });
+    const resB = await handleApi(reqB, env, '/api/usage/activity');
+    const bodyB = (await resB.json()) as { items: Array<{ id: string }> };
+    expect(bodyB.items.map((i) => i.id)).toEqual(['r9']);
+    expect(queryActivityMock).toHaveBeenCalledWith(userId2, 20, env);
   });
 });
 

@@ -7,15 +7,46 @@ import { useState } from 'react';
  */
 export function CopyButton({ text, tone = 'default' }: { text: string; tone?: 'default' | 'code' }) {
   const [copied, setCopied] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  function flip(label: 'copied' | 'failed') {
+    setCopied(label === 'copied');
+    setFailed(label === 'failed');
+    window.setTimeout(() => {
+      setCopied(false);
+      setFailed(false);
+    }, 2000);
+  }
 
   async function handleCopy() {
+    let ok = false;
     try {
-      await navigator.clipboard.writeText(text);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        ok = true;
+      }
     } catch {
-      return;
+      ok = false;
     }
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 2000);
+
+    if (!ok) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        ok = document.execCommand('copy');
+      } catch {
+        ok = false;
+      }
+      document.body.removeChild(textarea);
+    }
+
+    flip(ok ? 'copied' : 'failed');
   }
 
   const base = 'rounded-control px-3 py-1.5 font-body text-body-sm transition-colors';
@@ -27,7 +58,7 @@ export function CopyButton({ text, tone = 'default' }: { text: string; tone?: 'd
 
   return (
     <button type="button" onClick={handleCopy} className={`${base} ${tones[tone]}`}>
-      {copied ? 'Copied' : 'Copy'}
+      {copied ? 'Copied' : failed ? 'Copy failed' : 'Copy'}
     </button>
   );
 }

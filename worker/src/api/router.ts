@@ -189,7 +189,7 @@ async function handleListKeys(request: Request, env: Env): Promise<Response> {
     return auth;
   }
   try {
-    const keys = await listAgentKeys(env);
+    const keys = await listAgentKeys(auth.userId, env);
     return apiOk({ keys });
   } catch (err) {
     captureError('api/router.ts::handleListKeys', err);
@@ -257,7 +257,7 @@ async function handleUsageSummary(request: Request, env: Env): Promise<Response>
     return auth;
   }
   try {
-    const summary = await queryUsageSummary(env);
+    const summary = await queryUsageSummary(auth.userId, env);
     return apiOk(summary);
   } catch (err) {
     captureError('api/router.ts::handleUsageSummary', err);
@@ -274,7 +274,7 @@ async function handleUsageActivity(request: Request, env: Env): Promise<Response
   const rawLimit = Number(url.searchParams.get('limit') ?? '20');
   const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.floor(Math.min(rawLimit, 100)) : 20;
   try {
-    const items = await queryActivity(limit, env);
+    const items = await queryActivity(auth.userId, limit, env);
     return apiOk({ items });
   } catch (err) {
     captureError('api/router.ts::handleUsageActivity', err);

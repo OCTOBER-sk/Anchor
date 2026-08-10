@@ -303,16 +303,21 @@ export async function revokeAgent(agentId: string, env: Env): Promise<void> {
   }
 }
 
-export async function listAgentKeys(env: Env): Promise<AgentKeyRow[]> {
+export async function listAgentKeys(ownerId: string, env: Env): Promise<AgentKeyRow[]> {
   const client = makeClient(env);
   // lastUsedAt is derived at read time from the append-only requests log
   // (frontend.md §4.1) — the agents.last_used_at column is never populated
   // live. Only the name field is edited via PATCH; slug and key_hash are fixed.
+  // Scoped to the authenticated dashboard user so one account never sees
+  // another's agent keys.
   const result = await client.execute({
     sql: `select a.id, a.key_hash, a.slug, a.name, a.tier, a.status, a.created_at,
              (select max(r.created_at) from requests r where r.agent_id = a.id) as last_used_at,
              a.rate_limit_per_min, a.rate_limit_per_day
-          from agents a order by a.created_at desc`,
+          from agents a
+          where a.owner_id = ?
+          order by a.created_at desc`,
+    args: [ownerId],
   });
   return result.rows.map((row) => {
     const r = row as unknown as {
@@ -382,15 +387,22 @@ function capabilityOf(toolName: string): 'search' | 'devSearch' | 'memory' | nul
   }
 }
 
-export async function queryUsageSummary(env: Env): Promise<UsageSummary> {
+export async function queryUsageSummary(ownerId: string, env: Env): Promise<UsageSummary> {
   const client = makeClient(env);
   const now = new Date();
   const monthStartIso = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const todayDate = now.toISOString().slice(0, 10);
 
+  // Both queries are scoped to the owner: active key count filters agents by
+  // owner_id, and the request log joins through agents so usage never leaks
+  // across accounts.
   const [activeRes, monthRowsArr] = await Promise.all([
-    client.execute({ sql: "select count(*) as c from agents where status = 'active'" }),
-    client.execute({ sql: 'select tool_name, created_at from requests where created_at >= ?', args: [monthStartIso] }),
+    client.execute({ sql: "select count(*) as c from agents where status = 'active' and owner_id = ?", args: [ownerId] }),
+    client.execute({
+      sql: `select r.tool_name, r.created_at from requests r join agents a on a.id = r.agent_id
+            where a.owner_id = ? and r.created_at >= ?`,
+      args: [ownerId, monthStartIso],
+    }),
   ]);
 
   const activeKeyCount = Number((activeRes.rows[0] as unknown as { c: number } | undefined)?.c ?? 0);
@@ -422,13 +434,14 @@ export async function queryUsageSummary(env: Env): Promise<UsageSummary> {
   return { requestsToday, requestsThisMonth, activeKeyCount, byCapability };
 }
 
-export async function queryActivity(limit: number, env: Env): Promise<ActivityItem[]> {
+export async function queryActivity(ownerId: string, limit: number, env: Env): Promise<ActivityItem[]> {
   const client = makeClient(env);
   const result = await client.execute({
     sql: `select r.id, r.tool_name, r.status, r.error_code, r.latency_ms, r.created_at, a.slug as agent_slug
           from requests r left join agents a on a.id = r.agent_id
+          where a.owner_id = ?
           order by r.created_at desc limit ?`,
-    args: [limit],
+    args: [ownerId, limit],
   });
   return result.rows.map((row) => {
     const r = row as unknown as {
