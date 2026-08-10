@@ -28,15 +28,16 @@ export function AuthCallback() {
 
   useEffect(() => {
     const code = searchParams.get('code');
+    const tokenHash = searchParams.get('token_hash');
 
-    if (!code) {
+    if (!code && !tokenHash) {
       setState({ phase: 'error', message: 'No sign-in code was present in the callback URL.' });
       return;
     }
 
     let cancelled = false;
 
-    async function exchange(linkCode: string) {
+    async function exchange() {
       let supabase;
       try {
         supabase = getSupabase();
@@ -46,7 +47,9 @@ export function AuthCallback() {
         return;
       }
 
-      const { data, error } = await supabase.auth.exchangeCodeForSession(linkCode);
+      const { data, error } = code
+        ? await supabase.auth.exchangeCodeForSession(code)
+        : await supabase.auth.verifyOtp({ type: 'email', token_hash: tokenHash as string });
 
       if (cancelled) return;
 
@@ -60,7 +63,7 @@ export function AuthCallback() {
       setState({ phase: 'done', firstLogin: !onboardingCompleted });
     }
 
-    void exchange(code);
+    void exchange();
 
     return () => {
       cancelled = true;

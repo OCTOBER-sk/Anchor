@@ -7,11 +7,13 @@ import { getSupabase } from '../lib/supabase';
 
 /**
  * Profile section — frontend.md §3.6. Email is read-only (it is the auth
- * identity); there is no other editable profile data.
+ * identity); phone comes from the signup `user_metadata` and is also
+ * read-only.
  */
 function ProfileSection() {
   const { session } = useSession();
   const email = session?.user?.email ?? '—';
+  const phone = session?.user?.user_metadata?.phone ?? '—';
 
   return (
     <section>
@@ -20,6 +22,10 @@ function ProfileSection() {
         <div className="p-6">
           <p className="text-body-sm text-text-tertiary">Email</p>
           <p className="mt-1 text-body-md font-medium text-text-primary">{email}</p>
+        </div>
+        <div className="p-6">
+          <p className="text-body-sm text-text-tertiary">Phone</p>
+          <p className="mt-1 text-body-md font-medium text-text-primary">{phone}</p>
         </div>
       </div>
     </section>

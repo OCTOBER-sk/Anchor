@@ -26,6 +26,11 @@ export function getSupabase(): SupabaseClient {
     );
   }
 
-  client = createClient(url, anonKey);
+  client = createClient(url, anonKey, {
+    auth: {
+      flowType: 'pkce',
+      detectSessionInUrl: true,
+    },
+  });
   return client;
 }
