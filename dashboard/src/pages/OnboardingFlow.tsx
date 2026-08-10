@@ -87,8 +87,8 @@ function KeyRevealCard({
         <p className="mt-1 text-body-sm text-text-secondary">Copy it now — you'll use it to connect a runtime.</p>
       </header>
 
-      <div className="mt-6 rounded-card border border-status-warning bg-status-warning/12 px-4 py-3 text-body-sm text-status-warning">
-        You won't be able to see this key again after you close this window.
+      <div className="mt-6 rounded-card border border-border-accent bg-accent/8 px-4 py-3 text-body-sm text-text-secondary">
+        Copy your key now — it's also always re-viewable later from the keys list.
       </div>
 
       <figure className="relative mt-6 overflow-hidden rounded-control bg-code-bg">
