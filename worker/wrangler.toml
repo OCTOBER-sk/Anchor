@@ -18,7 +18,7 @@ id = "f2e342c2ca2b43ae9fdcf5432e5d26ab"
 crons = ["0 0 */4 * *"]
 
 [vars]
-ALLOWED_ORIGINS = "https://claude.ai,https://*.anchor-dashboard-5mp.pages.dev"
+ALLOWED_ORIGINS = "https://claude.ai,https://anchor-dashboard-5mp.pages.dev,https://*.anchor-dashboard-5mp.pages.dev"
 TAVILY_RESERVE_CREDITS = "100"
 
 # Secrets set via `wrangler secret put <NAME>`, never committed:
