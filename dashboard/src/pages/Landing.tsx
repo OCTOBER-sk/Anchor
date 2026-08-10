@@ -183,7 +183,7 @@ function RecallTerminal() {
           <span className="h-2 w-2 rounded-full bg-code-text/50" />
           <span className="ml-3 font-mono text-mono-sm text-code-text/60">anchor — recall</span>
         </div>
-        <div className="p-5 font-mono text-mono-md leading-7 text-code-text">
+        <div className="h-56 overflow-hidden p-5 font-mono text-mono-md leading-7 text-code-text">
           <p className="whitespace-pre-wrap">
             <span className="text-code-accent">$</span>
             {stillTyping ? (

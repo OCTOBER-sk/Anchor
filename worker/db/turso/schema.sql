@@ -1,6 +1,7 @@
 create table if not exists agents (
   id                  text primary key,           -- uuid, generated at creation
-  key_hash            text not null unique,        -- sha-256 of the full agent key; raw key is never stored
+  key_hash            text not null unique,        -- sha-256 of the full agent key; used for auth (raw key never compared)
+  key_ciphertext      text,                        -- AES-256-GCM of the raw key (base64 iv||ct||tag) for dashboard reveal; NULL for pre-migration keys
   slug                text not null,
   name                text not null default '',    -- free-form display name (editable); slug is derived and fixed
   owner_id            text not null,               -- ties to the same owner_id used in Supabase memories

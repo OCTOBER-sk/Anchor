@@ -1,11 +1,13 @@
-import type { Env } from '../context';
+import type { AgentTier, Env } from '../context';
 import { safeFetch } from '../utils/safe-fetch';
 import { captureError } from '../utils/monitoring';
+import { encrypt, decrypt, getKeyCipher, KeyEncryptionKeyError } from '../utils/crypto';
 import { generateAgentKey } from '../auth/keys';
 import { hashAgentKey } from '../auth/verify';
 import {
   createAgent,
   getAgentById,
+  getAgentKeyCiphertext,
   listAgentKeys,
   renameAgent,
   revokeAgent,
@@ -100,6 +102,16 @@ function nameFromBody(body: unknown): string | null {
   return trimmed;
 }
 
+const AGENT_TIERS: readonly AgentTier[] = ['standard', 'admin', 'debug'];
+
+function tierFromBody(body: unknown): AgentTier {
+  if (body === null || typeof body !== 'object') {
+    return 'standard';
+  }
+  const raw = (body as { tier?: unknown }).tier;
+  return AGENT_TIERS.includes(raw as AgentTier) ? (raw as AgentTier) : 'standard';
+}
+
 async function handleHealth(): Promise<Response> {
   return apiOk({ status: 'ok', version: VERSION });
 }
@@ -122,11 +134,14 @@ async function handleCreateKey(request: Request, env: Env): Promise<Response> {
     return apiError('VALIDATION_FAILED', 'Agent key name must be 2-60 characters.');
   }
 
+  const tier = tierFromBody(body);
+
   try {
     const slug = await deriveUniqueSlug(name, env);
     const key = generateAgentKey(slug);
     const keyHash = await hashAgentKey(key);
-    const agent = await createAgent({ keyHash, slug, name, ownerId: auth.userId }, env);
+    const keyCiphertext = await encrypt(key, getKeyCipher(env));
+    const agent = await createAgent({ keyHash, keyCiphertext, slug, name, ownerId: auth.userId, tier }, env);
     return apiOk({
       id: agent.id,
       key, // raw key — returned ONLY on this call, never again
@@ -136,7 +151,34 @@ async function handleCreateKey(request: Request, env: Env): Promise<Response> {
       createdAt: new Date().toISOString(),
     });
   } catch (err) {
+    if (err instanceof KeyEncryptionKeyError) {
+      return apiError('INTERNAL_ERROR', err.message);
+    }
     captureError('api/router.ts::handleCreateKey', err);
+    return apiError('INTERNAL_ERROR');
+  }
+}
+
+async function handleRevealKey(request: Request, env: Env, keyId: string): Promise<Response> {
+  const auth = await requireAuth(request, env);
+  if (auth instanceof Response) {
+    return auth;
+  }
+  try {
+    const row = await getAgentKeyCiphertext(keyId, env);
+    if (row === null || row.ownerId !== auth.userId || row.status !== 'active') {
+      return apiError('AGENT_KEY_NOT_FOUND');
+    }
+    if (row.keyCiphertext === null || row.keyCiphertext.length === 0) {
+      return apiError('AGENT_KEY_NOT_FOUND', 'This key cannot be revealed.');
+    }
+    const key = await decrypt(row.keyCiphertext, getKeyCipher(env));
+    return apiOk({ key });
+  } catch (err) {
+    if (err instanceof KeyEncryptionKeyError) {
+      return apiError('INTERNAL_ERROR', err.message);
+    }
+    captureError('api/router.ts::handleRevealKey', err);
     return apiError('INTERNAL_ERROR');
   }
 }
@@ -291,6 +333,17 @@ export async function handleApi(request: Request, env: Env, pathname: string): P
     }
     if (request.method === 'GET' && pathname === '/api/agent-keys') {
       return handleListKeys(request, env);
+    }
+    if (request.method === 'GET' && pathname.endsWith('/reveal')) {
+      const prefix = '/api/agent-keys/';
+      const suffix = '/reveal';
+      if (pathname.startsWith(prefix) && pathname.endsWith(suffix)) {
+        const keyId = decodeURIComponent(pathname.slice(prefix.length, pathname.length - suffix.length));
+        if (keyId.length === 0) {
+          return apiError('VALIDATION_FAILED');
+        }
+        return handleRevealKey(request, env, keyId);
+      }
     }
     if (request.method === 'DELETE' && pathname.startsWith('/api/agent-keys/')) {
       const keyId = decodeURIComponent(pathname.slice('/api/agent-keys/'.length));

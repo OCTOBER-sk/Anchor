@@ -192,8 +192,8 @@ export type OnboardingValidation =
 /* Endpoints                                                           */
 /* ------------------------------------------------------------------ */
 
-export async function createAgentKey(name: string): Promise<CreatedAgentKey> {
-  return request('/agent-keys', { method: 'POST', body: { name } });
+export async function createAgentKey(name: string, tier: AgentTier = 'standard'): Promise<CreatedAgentKey> {
+  return request('/agent-keys', { method: 'POST', body: { name, tier } });
 }
 
 export async function fetchAgentKeys(): Promise<AgentKey[]> {
@@ -208,6 +208,16 @@ export async function revokeAgentKey(id: string): Promise<void> {
 /** PATCH /api/agent-keys/:id — rename the display name (slug is fixed). */
 export async function renameAgentKey(id: string, name: string): Promise<{ id: string; name: string; slug: string }> {
   return request(`/agent-keys/${encodeURIComponent(id)}`, { method: 'PATCH', body: { name } });
+}
+
+/**
+ * GET /api/agent-keys/:id/reveal — re-render the raw key (reviewable keys).
+ * Legacy keys created before the ciphertext column was added have no stored
+ * value and resolve to 404 AGENT_KEY_NOT_FOUND; the caller shows a muted
+ * "not available" note for those.
+ */
+export async function revealAgentKey(id: string): Promise<{ key: string }> {
+  return request(`/agent-keys/${encodeURIComponent(id)}/reveal`);
 }
 
 export async function fetchUsageSummary(): Promise<UsageSummary> {

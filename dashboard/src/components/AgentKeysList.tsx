@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useAgentKeys } from '../hooks/useAgentKeys';
-import type { AgentKey } from '../lib/api';
+import { ApiError, revealAgentKey, type AgentKey } from '../lib/api';
 import { formatRelativeTime, formatShortDate } from '../lib/time';
 import { CreateKeyModal } from './CreateKeyModal';
+import { CopyButton } from './CopyButton';
 import { EmptyState } from './EmptyState';
 import { ErrorCard } from './ErrorCard';
 import { Skeleton } from './Skeleton';
@@ -37,6 +38,11 @@ function AgentKeyRow({
   const [name, setName] = useState(agentKey.name);
   const [renameError, setRenameError] = useState<string | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const [rawKey, setRawKey] = useState<string | null>(null);
+  const [isRevealing, setIsRevealing] = useState(false);
+  const [revealError, setRevealError] = useState<string | null>(null);
+  const [isLegacy, setIsLegacy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -77,76 +83,144 @@ function AgentKeyRow({
     }
   }
 
+  // Show is one-directional: re-showing reuses the cached raw key (we never
+  // hold it after a collapse, but within a session the fetched value is kept).
+  // Collapse happens via Hide, which drops the cached key from view only.
+  async function handleShow() {
+    if (rawKey !== null) {
+      setRevealed(true);
+      setRevealError(null);
+      return;
+    }
+    if (isRevealing) return;
+    setIsRevealing(true);
+    setRevealError(null);
+    try {
+      const { key } = await revealAgentKey(agentKey.id);
+      setRawKey(key);
+      setRevealed(true);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'AGENT_KEY_NOT_FOUND') {
+        // Legacy key with no stored ciphertext — muted note, not an error.
+        setIsLegacy(true);
+      } else {
+        setRevealError(err instanceof Error ? err.message : 'Could not reveal this key. Please try again.');
+      }
+    } finally {
+      setIsRevealing(false);
+    }
+  }
+
+  function handleHide() {
+    setRevealed(false);
+    setRevealError(null);
+  }
+
   return (
-    <div className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0">
-        {editing ? (
-          <div className="max-w-sm">
-            <input
-              ref={inputRef}
-              type="text"
-              autoComplete="off"
-              maxLength={MAX_NAME_LENGTH}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  void save();
-                } else if (event.key === 'Escape') {
-                  cancelEditing();
-                }
-              }}
-              onBlur={() => {
-                if (!isRenaming) void save();
-              }}
-              className={`input px-3 py-1.5 text-body-md ${renameError ? 'border-status-error' : ''}`}
-              aria-label="Agent key name"
-            />
-            <div className="mt-1 flex items-center justify-between gap-2">
-              <p className="text-body-sm text-status-error">
-                {renameError ??
-                  (trimmedName.length < MIN_NAME_LENGTH
-                    ? 'At least two characters.'
-                    : name.length > MAX_NAME_LENGTH
-                      ? 'Keep it under 60 characters.'
-                      : null)}
-              </p>
-              <p className="font-mono text-mono-sm text-text-tertiary">
-                {name.length}/{MAX_NAME_LENGTH}
-              </p>
+    <div className="px-6 py-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          {editing ? (
+            <div className="max-w-sm">
+              <input
+                ref={inputRef}
+                type="text"
+                autoComplete="off"
+                maxLength={MAX_NAME_LENGTH}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    void save();
+                  } else if (event.key === 'Escape') {
+                    cancelEditing();
+                  }
+                }}
+                onBlur={() => {
+                  if (!isRenaming) void save();
+                }}
+                className={`input px-3 py-1.5 text-body-md ${renameError ? 'border-status-error' : ''}`}
+                aria-label="Agent key name"
+              />
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <p className="text-body-sm text-status-error">
+                  {renameError ??
+                    (trimmedName.length < MIN_NAME_LENGTH
+                      ? 'At least two characters.'
+                      : name.length > MAX_NAME_LENGTH
+                        ? 'Keep it under 60 characters.'
+                        : null)}
+                </p>
+                <p className="font-mono text-mono-sm text-text-tertiary">
+                  {name.length}/{MAX_NAME_LENGTH}
+                </p>
+              </div>
             </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="truncate text-body-md font-medium text-text-primary">{agentKey.name}</span>
+              <StatusBadge status={agentKey.status} />
+            </div>
+          )}
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+            <code className="font-mono text-mono-sm text-text-tertiary">{agentKey.keyPrefix}</code>
+            <TierBadge tier={agentKey.tier} />
+            <span className="text-body-sm text-text-tertiary">
+              {agentKey.lastUsedAt ? `Last used ${formatRelativeTime(agentKey.lastUsedAt).toLowerCase()}` : 'Never used'}
+            </span>
+            <span className="text-body-sm text-text-tertiary">Created {formatShortDate(agentKey.createdAt)}</span>
           </div>
-        ) : (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="truncate text-body-md font-medium text-text-primary">{agentKey.name}</span>
-            <StatusBadge status={agentKey.status} />
-          </div>
-        )}
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-          <code className="font-mono text-mono-sm text-text-tertiary">{agentKey.keyPrefix}</code>
-          <TierBadge tier={agentKey.tier} />
-          <span className="text-body-sm text-text-tertiary">
-            {agentKey.lastUsedAt ? `Last used ${formatRelativeTime(agentKey.lastUsedAt).toLowerCase()}` : 'Never used'}
-          </span>
-          <span className="text-body-sm text-text-tertiary">Created {formatShortDate(agentKey.createdAt)}</span>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          {!editing ? (
+            <button type="button" onClick={revealed ? handleHide : () => void handleShow()} className="text-body-sm font-medium text-accent hover:text-accent-hover">
+              {isRevealing ? 'Showing…' : revealed ? 'Hide' : 'Show'}
+            </button>
+          ) : null}
+          {!editing ? (
+            <button type="button" onClick={startEditing} className="text-body-sm font-medium text-accent hover:text-accent-hover">
+              Edit name
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => onRevoke(agentKey)}
+            disabled={agentKey.status !== 'active' || editing}
+            className="btn-secondary btn-small disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Revoke
+          </button>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-3">
-        {!editing ? (
-          <button type="button" onClick={startEditing} className="text-body-sm font-medium text-accent hover:text-accent-hover">
-            Edit name
-          </button>
-        ) : null}
-        <button
-          type="button"
-          onClick={() => onRevoke(agentKey)}
-          disabled={agentKey.status !== 'active' || editing}
-          className="btn-secondary btn-small disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Revoke
-        </button>
-      </div>
+
+      {revealed && rawKey !== null ? (
+        <div className="mt-4">
+          <figure className="relative overflow-hidden rounded-control bg-code-bg">
+            <div className="absolute right-3 top-3 flex items-center gap-2">
+              <CopyButton text={rawKey} tone="code" />
+              <button
+                type="button"
+                onClick={handleHide}
+                className="rounded-control border border-border-default/40 px-3 py-1.5 font-body text-body-sm text-code-text transition-colors hover:border-border-default/80 hover:text-code-accent"
+              >
+                Hide
+              </button>
+            </div>
+            <pre className="overflow-x-auto p-4 pr-28 font-mono text-mono-sm leading-6 text-code-text">
+              <code>{rawKey}</code>
+            </pre>
+          </figure>
+        </div>
+      ) : isLegacy ? (
+        <p className="mt-4 text-body-sm text-text-tertiary">
+          Key not available — this legacy key was created before keys could be re-viewed.
+        </p>
+      ) : revealError ? (
+        <p className="mt-4 text-body-sm text-status-error" role="alert">
+          {revealError}
+        </p>
+      ) : null}
     </div>
   );
 }

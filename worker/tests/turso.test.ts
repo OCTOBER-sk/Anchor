@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Client, ResultSet } from '@libsql/client/web';
 import { createClient } from '@libsql/client/web';
-import { lookupAgent, createAgent, listAgents, revokeAgent, renameAgent, slugify, deriveUniqueSlug, listAgentKeys, logRequest, queryUsageSummary, queryActivity } from '../src/storage/turso';
+import { lookupAgent, createAgent, getAgentKeyCiphertext, listAgents, revokeAgent, renameAgent, slugify, deriveUniqueSlug, listAgentKeys, logRequest, queryUsageSummary, queryActivity } from '../src/storage/turso';
 import { buildTestEnv, TEST_AGENT, type MemoryKV } from './test-utils';
 
 vi.mock('@libsql/client/web', () => ({
@@ -97,6 +97,58 @@ describe('storage/turso', () => {
     const agentKv = env.AGENT_KEYS as unknown as MemoryKV;
     const cached = JSON.parse(agentKv.data.get('hash1') ?? '{}');
     expect(cached.id).toBe(record.id);
+  });
+
+  it('createAgent stores the encrypted key_ciphertext alongside the key hash', async () => {
+    executeMock.mockResolvedValue(resultSet());
+
+    const env = await buildTestEnv();
+    await createAgent(
+      { keyHash: 'hash-ct', keyCiphertext: 'c2lwaGVyLWN0', slug: 'ct', ownerId: 'anchor-owner' },
+      env,
+    );
+
+    const insertCall = executeMock.mock.calls[0]?.[0];
+    expect(insertCall.sql).toContain('key_ciphertext');
+    expect(insertCall.args).toContain('c2lwaGVyLWN0');
+    expect(insertCall.args).toContain('hash-ct');
+  });
+
+  it('createAgent stores null key_ciphertext when none is provided', async () => {
+    executeMock.mockResolvedValue(resultSet());
+
+    const env = await buildTestEnv();
+    await createAgent({ keyHash: 'hash-null', slug: 'nullct', ownerId: 'anchor-owner' }, env);
+
+    const insertArgs = executeMock.mock.calls[0]?.[0].args;
+    expect(insertArgs).toContain(null);
+  });
+
+  it('getAgentKeyCiphertext maps the reveal row and returns null when missing', async () => {
+    executeMock
+      .mockResolvedValueOnce(
+        resultSet([
+          {
+            id: 'a1',
+            key_hash: 'hash1',
+            owner_id: 'anchor-owner',
+            status: 'active',
+            key_ciphertext: 'c2lwaGVyLWN0',
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(resultSet());
+
+    const env = await buildTestEnv();
+    const row = await getAgentKeyCiphertext('a1', env);
+    const missing = await getAgentKeyCiphertext('nope', env);
+
+    expect(row).toEqual({ id: 'a1', keyHash: 'hash1', ownerId: 'anchor-owner', status: 'active', keyCiphertext: 'c2lwaGVyLWN0' });
+    expect(missing).toBeNull();
+    expect(executeMock.mock.calls[0]?.[0]).toMatchObject({
+      sql: expect.stringContaining('key_ciphertext'),
+      args: ['a1'],
+    });
   });
 
   it('createAgent honors explicit tier and rate limits', async () => {

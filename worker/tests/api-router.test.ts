@@ -6,6 +6,7 @@ vi.mock('../src/storage/turso', () => ({
   deriveUniqueSlug: vi.fn(),
   createAgent: vi.fn(),
   getAgentById: vi.fn(),
+  getAgentKeyCiphertext: vi.fn(),
   listAgentKeys: vi.fn(),
   renameAgent: vi.fn(),
   revokeAgent: vi.fn(),
@@ -16,11 +17,14 @@ vi.mock('../src/storage/turso', () => ({
 }));
 
 import * as turso from '../src/storage/turso';
+import { encrypt, getKeyCipher } from '../src/utils/crypto';
+import { hashAgentKey } from '../src/auth/verify';
 import { buildTestEnv, TEST_AGENT } from './test-utils';
 
 const deriveUniqueSlugMock = vi.mocked(turso.deriveUniqueSlug);
 const createAgentMock = vi.mocked(turso.createAgent);
 const getAgentByIdMock = vi.mocked(turso.getAgentById);
+const getAgentKeyCiphertextMock = vi.mocked(turso.getAgentKeyCiphertext);
 const listAgentKeysMock = vi.mocked(turso.listAgentKeys);
 const renameAgentMock = vi.mocked(turso.renameAgent);
 const revokeAgentMock = vi.mocked(turso.revokeAgent);
@@ -134,6 +138,56 @@ describe('api router — agent keys', () => {
     expect(body.key).toMatch(/^anchor_cursor_[0-9a-f]{32}$/);
   });
 
+  it('POST /api/agent-keys stores an explicit tier of admin and echoes it back', async () => {
+    const env: Env = await buildTestEnv();
+    const created: AgentRecord = { ...buildAgent(), id: 'key-1', slug: 'cursor', tier: 'admin' };
+    createAgentMock.mockResolvedValue(created);
+
+    const request = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ name: 'Cursor', tier: 'admin' }),
+    });
+    const response = await handleApi(request, env, '/api/agent-keys');
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { tier: string };
+    expect(body.tier).toBe('admin');
+    expect(createAgentMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'Cursor', tier: 'admin' }), env);
+  });
+
+  it('POST /api/agent-keys defaults a missing tier to standard', async () => {
+    const env: Env = await buildTestEnv();
+    const created: AgentRecord = { ...buildAgent(), id: 'key-1', slug: 'cursor' };
+    createAgentMock.mockResolvedValue(created);
+
+    const request = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ name: 'Cursor' }),
+    });
+    const response = await handleApi(request, env, '/api/agent-keys');
+
+    expect(response.status).toBe(200);
+    expect(createAgentMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'Cursor', tier: 'standard' }), env);
+  });
+
+  it('POST /api/agent-keys defaults an invalid tier to standard', async () => {
+    const env: Env = await buildTestEnv();
+    const created: AgentRecord = { ...buildAgent(), id: 'key-1', slug: 'cursor' };
+    createAgentMock.mockResolvedValue(created);
+
+    const request = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ name: 'Cursor', tier: 'premium' }),
+    });
+    const response = await handleApi(request, env, '/api/agent-keys');
+
+    expect(response.status).toBe(200);
+    expect(createAgentMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'Cursor', tier: 'standard' }), env);
+  });
+
   it('POST /api/agent-keys rejects a name shorter than 2 chars with 422', async () => {
     const env: Env = await buildTestEnv();
     const request = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys', {
@@ -159,6 +213,21 @@ describe('api router — agent keys', () => {
     const response = await handleApi(request, env, '/api/agent-keys');
 
     expect(response.status).toBe(422);
+  });
+
+  it('POST /api/agent-keys fails with a clear error when KEY_ENC_KEY is missing', async () => {
+    const env: Env = await buildTestEnv({ KEY_ENC_KEY: '' });
+    const request = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ name: 'Cursor' }),
+    });
+    const response = await handleApi(request, env, '/api/agent-keys');
+
+    expect(response.status).toBe(500);
+    const body = (await response.json()) as { error: { message: string } };
+    expect(body.error.message).toMatch(/KEY_ENC_KEY/);
+    expect(createAgentMock).not.toHaveBeenCalled();
   });
 
   it('GET /api/agent-keys returns masked prefixes and never a raw key', async () => {
@@ -283,6 +352,142 @@ describe('api router — agent keys', () => {
 
     expect(response.status).toBe(422);
     expect(renameAgentMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('api router — reveal key', () => {
+  it('requires auth and returns 401 UNAUTHORIZED without a bearer token', async () => {
+    const env: Env = await buildTestEnv();
+    const request = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys/key-1/reveal', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const response = await handleApi(request, env, '/api/agent-keys/key-1/reveal');
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized.' } });
+    expect(getAgentKeyCiphertextMock).not.toHaveBeenCalled();
+  });
+
+  it('returns the raw key that hashes to the stored key_hash', async () => {
+    const env: Env = await buildTestEnv();
+    const rawKey = 'anchor_reveal_0123456789abcdef0123456789abcdef';
+    const keyHash = await hashAgentKey(rawKey);
+    const ciphertext = await encrypt(rawKey, getKeyCipher(env));
+    getAgentKeyCiphertextMock.mockResolvedValue({
+      id: 'key-1',
+      keyHash,
+      ownerId: userId,
+      status: 'active',
+      keyCiphertext: ciphertext,
+    });
+
+    const request = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys/key-1/reveal', {
+      method: 'GET',
+      headers: authHeaders(),
+    });
+    const response = await handleApi(request, env, '/api/agent-keys/key-1/reveal');
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { key: string };
+    expect(body.key).toBe(rawKey);
+    expect(await hashAgentKey(body.key)).toBe(keyHash);
+    expect(getAgentKeyCiphertextMock).toHaveBeenCalledWith('key-1', env);
+  });
+
+  it('returns 404 AGENT_KEY_NOT_FOUND for a legacy row with no ciphertext', async () => {
+    const env: Env = await buildTestEnv();
+    getAgentKeyCiphertextMock.mockResolvedValue({
+      id: 'key-1',
+      keyHash: 'hash1',
+      ownerId: userId,
+      status: 'active',
+      keyCiphertext: null,
+    });
+
+    const request = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys/key-1/reveal', {
+      method: 'GET',
+      headers: authHeaders(),
+    });
+    const response = await handleApi(request, env, '/api/agent-keys/key-1/reveal');
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({
+      error: { code: 'AGENT_KEY_NOT_FOUND', message: 'This key cannot be revealed.' },
+    });
+  });
+
+  it('returns 404 AGENT_KEY_NOT_FOUND for a row owned by someone else', async () => {
+    const env: Env = await buildTestEnv();
+    getAgentKeyCiphertextMock.mockResolvedValue({
+      id: 'key-2',
+      keyHash: 'hash2',
+      ownerId: 'someone-else',
+      status: 'active',
+      keyCiphertext: 'c2VjcmV0',
+    });
+
+    const request = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys/key-2/reveal', {
+      method: 'GET',
+      headers: authHeaders(),
+    });
+    const response = await handleApi(request, env, '/api/agent-keys/key-2/reveal');
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({ error: { code: 'AGENT_KEY_NOT_FOUND', message: 'Agent key not found.' } });
+  });
+
+  it('returns 404 AGENT_KEY_NOT_FOUND for a revoked key', async () => {
+    const env: Env = await buildTestEnv();
+    getAgentKeyCiphertextMock.mockResolvedValue({
+      id: 'key-1',
+      keyHash: 'hash1',
+      ownerId: userId,
+      status: 'revoked',
+      keyCiphertext: 'c2VjcmV0',
+    });
+
+    const request = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys/key-1/reveal', {
+      method: 'GET',
+      headers: authHeaders(),
+    });
+    const response = await handleApi(request, env, '/api/agent-keys/key-1/reveal');
+
+    expect(response.status).toBe(404);
+  });
+
+  it('returns 404 AGENT_KEY_NOT_FOUND when the row does not exist', async () => {
+    const env: Env = await buildTestEnv();
+    getAgentKeyCiphertextMock.mockResolvedValue(null);
+
+    const request = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys/missing/reveal', {
+      method: 'GET',
+      headers: authHeaders(),
+    });
+    const response = await handleApi(request, env, '/api/agent-keys/missing/reveal');
+
+    expect(response.status).toBe(404);
+  });
+
+  it('returns 500 with a clear error when KEY_ENC_KEY is missing', async () => {
+    const env: Env = await buildTestEnv({ KEY_ENC_KEY: '' });
+    getAgentKeyCiphertextMock.mockResolvedValue({
+      id: 'key-1',
+      keyHash: 'hash1',
+      ownerId: userId,
+      status: 'active',
+      keyCiphertext: 'c2VjcmV0',
+    });
+
+    const request = new Request('https://anchor-mcp.test.workers.dev/api/agent-keys/key-1/reveal', {
+      method: 'GET',
+      headers: authHeaders(),
+    });
+    const response = await handleApi(request, env, '/api/agent-keys/key-1/reveal');
+
+    expect(response.status).toBe(500);
+    const body = (await response.json()) as { error: { message: string } };
+    expect(body.error.message).toMatch(/KEY_ENC_KEY/);
   });
 });
 

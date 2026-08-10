@@ -19,6 +19,7 @@ export interface Env {
   SUPABASE_ANON_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   SUPABASE_URL: string;
+  KEY_ENC_KEY: string;
   CEREBRAS_API_KEY: string;
   GEMINI_API_KEY: string;
   TAVILY_API_KEY: string;

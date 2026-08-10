@@ -6,6 +6,9 @@ import { getAgentRecord, setAgentRecord } from './kv';
 
 export interface NewAgentRecord {
   keyHash: string;
+  // AES-256-GCM ciphertext of the raw key (base64(iv || ct || tag)), used only
+  // by the dashboard reveal endpoint. Auth still validates key_hash only.
+  keyCiphertext?: string;
   ownerId: string;
   name?: string;
   slug?: string;
@@ -184,10 +187,11 @@ export async function createAgent(record: NewAgentRecord, env: Env): Promise<Age
     rateLimits: record.rateLimits ?? { perMinute: 30, perDay: 500 },
   };
   await client.execute({
-    sql: 'insert into agents (id, key_hash, slug, name, owner_id, tier, rate_limit_per_min, rate_limit_per_day, status) values (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    sql: 'insert into agents (id, key_hash, key_ciphertext, slug, name, owner_id, tier, rate_limit_per_min, rate_limit_per_day, status) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     args: [
       agent.id,
       record.keyHash,
+      record.keyCiphertext ?? null,
       agent.slug,
       agent.name,
       agent.ownerId,
@@ -234,6 +238,41 @@ export async function getAgentById(agentId: string, env: Env): Promise<AgentReco
     return null;
   }
   return rowToAgentRecord(result.rows[0] as unknown as AgentRow);
+}
+
+export interface AgentKeyCiphertextRow {
+  id: string;
+  keyHash: string;
+  ownerId: string;
+  status: 'active' | 'revoked';
+  keyCiphertext: string | null;
+}
+
+// Row-level read for the reveal endpoint. Returns only the columns needed to
+// authorize (owner + status) and decrypt (key_ciphertext); never the raw key.
+export async function getAgentKeyCiphertext(agentId: string, env: Env): Promise<AgentKeyCiphertextRow | null> {
+  const client = makeClient(env);
+  const result = await client.execute({
+    sql: 'select id, key_hash, owner_id, status, key_ciphertext from agents where id = ? limit 1',
+    args: [agentId],
+  });
+  if (result.rows.length === 0) {
+    return null;
+  }
+  const row = result.rows[0] as unknown as {
+    id: string;
+    key_hash: string;
+    owner_id: string;
+    status: 'active' | 'revoked';
+    key_ciphertext: string | null;
+  };
+  return {
+    id: row.id,
+    keyHash: row.key_hash,
+    ownerId: row.owner_id,
+    status: row.status,
+    keyCiphertext: row.key_ciphertext,
+  };
 }
 
 export async function listAgents(env: Env): Promise<AgentRecord[]> {

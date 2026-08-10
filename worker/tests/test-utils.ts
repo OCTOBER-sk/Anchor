@@ -94,6 +94,7 @@ export async function buildTestEnv(overrides: Partial<Env> = {}): Promise<Env> {
     SUPABASE_ANON_KEY: 'test-anon',
     SUPABASE_URL: 'https://test.supabase.co',
     SUPABASE_SERVICE_ROLE_KEY: 'test',
+    KEY_ENC_KEY: 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=',
     CEREBRAS_API_KEY: 'csk-test',
     GEMINI_API_KEY: 'AIza-test',
     TAVILY_API_KEY: 'tvly-test',

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { createAgentKey, fetchAgentKeys, renameAgentKey, revokeAgentKey } from '../lib/api';
-import type { AgentKey, CreatedAgentKey } from '../lib/api';
+import type { AgentKey, AgentTier, CreatedAgentKey } from '../lib/api';
 
 export interface UseAgentKeysResult {
   data: AgentKey[] | null;
@@ -9,7 +9,7 @@ export interface UseAgentKeysResult {
   error: Error | null;
   refetch: () => void;
   /** POST — resolves with the raw key, which the caller shows exactly once. */
-  createKey: (name: string) => Promise<CreatedAgentKey>;
+  createKey: (name: string, tier?: AgentTier) => Promise<CreatedAgentKey>;
   /** DELETE — optimistic `status: 'revoked'` with rollback on failure. */
   revokeKey: (id: string) => Promise<void>;
   /** PATCH — optimistic rename (display name only, slug is fixed) with rollback on failure. */
@@ -42,11 +42,14 @@ export function useAgentKeys(): UseAgentKeysResult {
     void refetch();
   }, [refetch]);
 
-  const createKey = useCallback(async (name: string): Promise<CreatedAgentKey> => {
-    const created = await createAgentKey(name);
-    await refetch();
-    return created;
-  }, [refetch]);
+  const createKey = useCallback(
+    async (name: string, tier: AgentTier = 'standard'): Promise<CreatedAgentKey> => {
+      const created = await createAgentKey(name, tier);
+      await refetch();
+      return created;
+    },
+    [refetch],
+  );
 
   const revokeKey = useCallback(
     async (id: string): Promise<void> => {
