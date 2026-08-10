@@ -1,6 +1,6 @@
 # Contributing to Anchor
 
-Thanks for taking the time to contribute. Anchor is a memory layer for AI agents — a remote MCP server on Cloudflare Workers with a React dashboard. This project is maintained by one person with tight infrastructure (free-tier only), so please keep changes small and reviewable.
+Thanks for taking the time to contribute. Anchor is a memory layer for AI agents — a remote MCP server with a web dashboard. This project is maintained by one person on a strict free-tier budget, so please keep changes small and reviewable.
 
 ## Getting started
 

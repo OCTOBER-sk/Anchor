@@ -12,7 +12,6 @@
 <p align="center">
   <a href="https://github.com/OCTOBER-sk/Anchor/actions/workflows/ci.yml"><img src="https://github.com/OCTOBER-sk/Anchor/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-1A6B4A" alt="License: MIT"></a>
-  <a href="https://anchor-mcp.anchor-mcp.workers.dev"><img src="https://img.shields.io/badge/MCP-server-4ADE9B" alt="MCP server"></a>
   <a href="https://anchor-dashboard-5mp.pages.dev"><img src="https://img.shields.io/badge/dashboard-live-4ADE9B" alt="Dashboard"></a>
 </p>
 
@@ -75,54 +74,49 @@ Full setup: [Quickstart guide](https://anchor-dashboard-5mp.pages.dev/docs/quick
 
 ```
 ┌─────────────────────┐        ┌──────────────────────┐
-│  Runtime (MCP client)│  HTTP  │  Anchor Worker        │
-│  Claude Code / ...   │ ─────► │  Cloudflare Workers   │
-└─────────────────────┘        │  JSON-RPC 2.0 / MCP    │
-                               └───────┬──────────────┘
+│  Runtime (MCP client)│  HTTP  │  Anchor server        │
+│  Claude Code / ...   │ ─────► │  JSON-RPC 2.0 / MCP    │
+└─────────────────────┘        └───────┬──────────────┘
                                        │
                     ┌──────────────────┼──────────────────┐
                     ▼                  ▼                  ▼
               ┌───────────┐    ┌──────────────┐   ┌─────────────┐
               │  Memory   │    │ Agent keys   │   │   Search    │
-              │  pgvector │    │  (registry)  │   │  providers  │
+              │  (vector) │    │  (registry)  │   │   sources   │
               └───────────┘    └──────────────┘   └─────────────┘
 ```
 
-- **Worker** — the MCP server: auth (one agent key per runtime), rate limits, search with fallback chain, semantic memory, auto-recall injection. Ships with a 177-test suite.
-- **Dashboard** — the key + usage surface: create and revoke keys, watch activity. Dark-only, editorial type.
-- **Memory** — pgvector semantic search (3072-dim embeddings), with automatic recall of related context on every search.
+- **Server** — the MCP endpoint: auth (one agent key per runtime), rate limits, search with automatic fallback between sources, semantic memory, auto-recall injection. Ships with a 177-test suite.
+- **Dashboard** — the key and usage surface: create and revoke keys, watch activity. Dark-only, editorial type.
+- **Memory** — semantic vector search with automatic recall of related context on every search.
 - **Keys** — one registry, one row per runtime key; raw keys are shown exactly once, at creation.
 
 ## Repository layout
 
 ```
-worker/     Cloudflare Worker — MCP server, REST API, storage, tests
-dashboard/  Cloudflare Pages — React dashboard, docs, design system
-backend.md  Backend engineering spec (free-tier, greenfield)
-frontend.md Frontend + design-language spec
+worker/     MCP server — protocol, API, storage, tests
+dashboard/  Web dashboard — React app, docs, design system
 ```
 
 ## Local development
 
 ```bash
-# Worker
+# Server
 cd worker
 npm ci
-npm test              # 177 vitest tests
+npm test              # 177 tests
 npx tsc --noEmit
 
 # Dashboard
 cd dashboard
 npm ci
-npm run dev           # Vite dev server
+npm run dev           # local dev server
 npm run typecheck && npm run build
 ```
 
 ## Documentation
 
 - [Live docs](https://anchor-dashboard-5mp.pages.dev/docs) — quickstart, capabilities, API reference, troubleshooting
-- [`backend.md`](./backend.md) — backend engineering spec
-- [`frontend.md`](./frontend.md) — frontend spec and design language
 
 ## License
 

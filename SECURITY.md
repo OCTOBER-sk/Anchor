@@ -16,7 +16,7 @@ You will receive an acknowledgement within a few days, and a fix will be shipped
 
 - The MCP server endpoint (`/mcp`) and REST API (`/api/*`)
 - Agent-key authentication and rate limiting
-- The dashboard (Cloudflare Pages)
+- The web dashboard
 - Data isolation between agent keys (memory and usage records)
 
 ## Out of scope
