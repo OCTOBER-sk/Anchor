@@ -4,9 +4,74 @@
 
 /*
  * Anchor global styles.
- * Tokens live in tailwind.config.ts (frontend.md §2.1). Component style
- * rules per frontend.md §2.4. No gradients, no shadows, no dark mode.
+ *
+ * Color tokens are space-separated RGB triplets declared here — `:root` holds
+ * the warm-paper light palette, `.dark` the warm-paper dark palette (never
+ * pure black). tailwind.config.ts maps each token into a utility as
+ * `rgb(var(--token) / <alpha-value>)`, so every surface — backgrounds, text
+ * hierarchy, borders, status colors, code blocks, selection, focus rings —
+ * flips with the `.dark` class on <html>. Component style rules per
+ * frontend.md §2.4. No gradients, no shadows, no glow.
  */
+
+:root {
+  /* Light — warm paper (primary mode, frontend.md §2.1). */
+  --bg-base: 250 248 244; /* #FAF8F4 */
+  --bg-raised: 244 241 235; /* #F4F1EB */
+  --bg-sunken: 239 236 228; /* #EFECE4 */
+
+  --text-primary: 26 26 24; /* #1A1A18 */
+  --text-secondary: 74 74 69; /* #4A4A45 */
+  --text-tertiary: 110 110 104; /* #6E6E68 */
+
+  --accent: 26 107 74; /* #1A6B4A */
+  --accent-hover: 21 92 62; /* #155C3E */
+  --accent-subtle: 232 244 238; /* #E8F4EE */
+
+  --border-default: 226 222 213; /* #E2DED5 */
+  --border-strong: 200 196 187; /* #C8C4BB */
+  --border-accent: 168 212 188; /* #A8D4BC */
+
+  --status-success: 26 107 74; /* #1A6B4A */
+  --status-warning: 180 83 9; /* #B45309 */
+  --status-error: 185 28 28; /* #B91C1C */
+
+  --code-bg: 28 28 26; /* #1C1C1A */
+  --code-text: 232 228 220; /* #E8E4DC */
+  --code-accent: 94 201 154; /* #5EC99A */
+  --code-string: 212 167 106; /* #D4A76A */
+
+  /* Modal/scrim backdrop — near-black in both modes (rendered at /50). */
+  --overlay: 26 26 24;
+}
+
+.dark {
+  /* Dark — warm paper (frontend.md §2.1). Contrast already validated. */
+  --bg-base: 14 15 13; /* #0E0F0D */
+  --bg-raised: 22 23 19; /* #161713 */
+  --bg-sunken: 29 30 26; /* #1D1E1A */
+
+  --text-primary: 242 240 232; /* #F2F0E8 */
+  --text-secondary: 184 182 172; /* #B8B6AC */
+  --text-tertiary: 138 136 127; /* #8A887F */
+
+  --accent: 74 222 155; /* #4ADE9B */
+  --accent-hover: 99 231 172; /* #63E7AC */
+  --accent-subtle: 19 42 31; /* #132A1F */
+
+  --border-default: 42 43 38; /* #2A2B26 */
+  --border-strong: 58 59 52; /* #3A3B34 */
+  --border-accent: 35 86 63; /* #23563F */
+
+  --status-success: 74 222 155; /* #4ADE9B */
+  --status-warning: 217 160 91; /* #D9A05B */
+  --status-error: 229 116 112; /* #E57470 */
+
+  --code-bg: 10 11 9; /* #0A0B09 */
+  --code-text: 232 228 220; /* #E8E4DC */
+  --code-accent: 94 201 154; /* #5EC99A */
+  --code-string: 212 167 106; /* #D4A76A */
+}
 
 @layer base {
   html {
@@ -26,8 +91,8 @@
   }
 
   ::selection {
-    background-color: #a8d4bc;
-    color: #1a1a18;
+    background-color: rgb(var(--border-accent));
+    color: rgb(var(--text-primary));
   }
 }
 
@@ -47,7 +112,7 @@
     @apply border-border-strong;
   }
 
-  /* Buttons — primary: accent fill, white text, accent-hover on hover;
+  /* Buttons — primary: accent fill, bg-base text, accent-hover on hover;
    * secondary: transparent fill, border-default, text-primary. 8px radius. */
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-control font-body font-medium text-body-md px-5 py-3 transition-colors disabled:cursor-not-allowed disabled:opacity-50;
@@ -82,16 +147,30 @@
 
   .input:focus {
     @apply border-accent;
-    box-shadow: 0 0 0 2px #a8d4bc;
+    box-shadow: 0 0 0 2px rgb(var(--border-accent));
   }
 
-  /* Code blocks — always code-bg/code-text, JetBrains Mono, 8px radius. */
+  /* Code blocks — always code-bg/code-text (dark in both modes), JetBrains
+   * Mono, 8px radius. */
   .code-block {
     @apply rounded-control bg-code-bg text-code-text font-mono text-mono-md p-4 overflow-x-auto;
   }
 
   .code-inline {
     @apply font-mono text-mono-md text-code-accent;
+  }
+}
+
+@layer utilities {
+  /* Decorative notched corner (12px) — used on the landing recall terminal
+   * only. Never on buttons or cards, so focus rings always survive. */
+  .clip-corner {
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
+  }
+
+  /* Prose body copy for docs — 65ch line length, body-md, quiet secondary. */
+  .prose-copy {
+    @apply max-w-prose text-body-md leading-relaxed text-text-secondary;
   }
 }
 

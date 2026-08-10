@@ -2,42 +2,50 @@ import type { Config } from 'tailwindcss';
 
 /**
  * Anchor design tokens — locked per frontend.md §2.1.
- * These are the ONLY colors/fonts in the system. No additions.
+ *
+ * Colors are mapped to CSS variables declared in src/styles/globals.css as
+ * space-separated RGB triplets (`:root` = warm-paper light, `.dark` = warm-paper
+ * dark). Each utility resolves to `rgb(var(--token) / <alpha-value>)` so every
+ * surface flips with the `.dark` class on <html> and opacity modifiers work
+ * (`/50`, `/12`, …). These are the ONLY colors/fonts in the system. No additions.
  */
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     colors: {
       transparent: 'transparent',
       bg: {
-        base: '#FAF8F4',
-        raised: '#F4F1EB',
-        sunken: '#EFECE4',
+        base: 'rgb(var(--bg-base) / <alpha-value>)',
+        raised: 'rgb(var(--bg-raised) / <alpha-value>)',
+        sunken: 'rgb(var(--bg-sunken) / <alpha-value>)',
       },
-      'text-primary': '#1A1A18',
-      'text-secondary': '#4A4A45',
-      'text-tertiary': '#6E6E68',
+      'text-primary': 'rgb(var(--text-primary) / <alpha-value>)',
+      'text-secondary': 'rgb(var(--text-secondary) / <alpha-value>)',
+      'text-tertiary': 'rgb(var(--text-tertiary) / <alpha-value>)',
       accent: {
-        DEFAULT: '#1A6B4A',
-        hover: '#155C3E',
-        subtle: '#E8F4EE',
+        DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
+        hover: 'rgb(var(--accent-hover) / <alpha-value>)',
+        subtle: 'rgb(var(--accent-subtle) / <alpha-value>)',
       },
       border: {
-        default: '#E2DED5',
-        strong: '#C8C4BB',
-        accent: '#A8D4BC',
+        default: 'rgb(var(--border-default) / <alpha-value>)',
+        strong: 'rgb(var(--border-strong) / <alpha-value>)',
+        accent: 'rgb(var(--border-accent) / <alpha-value>)',
       },
       status: {
-        success: '#1A6B4A',
-        warning: '#B45309',
-        error: '#B91C1C',
+        success: 'rgb(var(--status-success) / <alpha-value>)',
+        warning: 'rgb(var(--status-warning) / <alpha-value>)',
+        error: 'rgb(var(--status-error) / <alpha-value>)',
       },
       code: {
-        bg: '#1C1C1A',
-        text: '#E8E4DC',
-        accent: '#5EC99A',
-        string: '#D4A76A',
+        bg: 'rgb(var(--code-bg) / <alpha-value>)',
+        text: 'rgb(var(--code-text) / <alpha-value>)',
+        accent: 'rgb(var(--code-accent) / <alpha-value>)',
+        string: 'rgb(var(--code-string) / <alpha-value>)',
       },
+      /* Modal/scrim backdrop — the same near-black in both modes. */
+      overlay: 'rgb(var(--overlay) / <alpha-value>)',
     },
     fontFamily: {
       display: ['Zodiak', 'Georgia', 'serif'],
@@ -45,6 +53,10 @@ export default {
       mono: ['"JetBrains Mono"', '"Courier New"', 'monospace'],
     },
     extend: {
+      /* 12% tint used by status badges/alert backgrounds (§2.4). */
+      opacity: {
+        12: '0.12',
+      },
       fontSize: {
         'display-xl': ['3.5rem', { lineHeight: '1.1' }],
         'display-lg': ['2.5rem', { lineHeight: '1.15' }],

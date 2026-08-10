@@ -4,6 +4,7 @@ import { Link, NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useSession } from '../hooks/useSession';
 import { getSupabase } from '../lib/supabase';
 import { ConfigMissingState } from './ConfigMissingState';
+import { ThemeToggle } from './ThemeToggle';
 
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Home', end: true },
@@ -110,7 +111,7 @@ function MobileSidebar({ open, onClose }: { open: boolean; onClose: () => void }
 
   return (
     <div className="fixed inset-0 z-40 lg:hidden">
-      <div className="absolute inset-0 bg-[#1A1A1880]" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 bg-overlay/50" onClick={onClose} aria-hidden="true" />
       <aside className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-border-default bg-bg-base">
         <div className="flex justify-end px-4 pt-4">
           <button
@@ -233,7 +234,10 @@ export function DashboardShell() {
             </button>
             <h1 className="truncate font-display font-semibold text-display-md text-text-primary">{pageTitle}</h1>
           </div>
-          <UserMenu email={session.user.email ?? 'User'} />
+          <div className="flex shrink-0 items-center gap-1">
+            <ThemeToggle />
+            <UserMenu email={session.user.email ?? 'User'} />
+          </div>
         </header>
 
         <main className="flex-1 px-4 py-6 sm:px-8 sm:py-8">

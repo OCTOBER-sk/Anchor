@@ -63,8 +63,19 @@ pages — all explicitly out of scope per `backend.md` §1.
 
 ### 2.1 Tokens (locked — verbatim)
 
+Color tokens are **space-separated RGB triplets** declared as CSS variables in
+`src/styles/globals.css`. `:root` holds the warm-paper **light** palette
+(primary mode, unchanged); `.dark` holds the warm-paper **dark** palette.
+`tailwind.config.ts` maps every token into a utility as
+`rgb(var(--token) / <alpha-value>)` with `darkMode: 'class'`, so every surface
+— backgrounds, text hierarchy, borders, status colors, code blocks, selection,
+focus rings — flips when `.dark` is present on `<html>`. Opacity modifiers
+(`/50`, `/12`, …) work everywhere; the `/12` status tint is a named step in
+the config's `opacity` scale.
+
+**Light (`:root`) — warm paper, primary mode:**
+
 ```css
-/* Color */
 --bg-base:      #FAF8F4;
 --bg-raised:    #F4F1EB;
 --bg-sunken:    #EFECE4;
@@ -91,9 +102,50 @@ pages — all explicitly out of scope per `backend.md` §1.
 --code-string:  #D4A76A;
 ```
 
-No other colors exist in the system. No gradients. No dark-mode toggle (the
-palette is already the one and only mode — dark surfaces exist only inside
-code blocks, never as a page-level theme).
+**Dark (`.dark`) — warm paper, never pure black** (contrast validated:
+primary ≈15:1, secondary ≈7:1, accent ≥7:1 on dark bg; do not weaken):
+
+```css
+--bg-base:      #0E0F0D;
+--bg-raised:    #161713;
+--bg-sunken:    #1D1E1A;
+
+--text-primary:   #F2F0E8;
+--text-secondary: #B8B6AC;
+--text-tertiary:  #8A887F;
+
+--accent:        #4ADE9B;
+--accent-hover:  #63E7AC;
+--accent-subtle: #132A1F;
+
+--border-default: #2A2B26;
+--border-strong:  #3A3B34;
+--border-accent:  #23563F;
+
+--status-success: #4ADE9B;
+--status-warning: #D9A05B;
+--status-error:   #E57470;
+
+--code-bg:      #0A0B09;
+--code-text:    #E8E4DC;
+--code-accent:  #5EC99A;
+--code-string:  #D4A76A;
+```
+
+Code-block colors are dark in **both** modes (they already were). A single
+`--overlay` token (the light-mode `text-primary` RGB, rendered at `/50`) is
+the modal/scrim backdrop in both modes — modals stay dimmed in dark mode too.
+
+**Theme switching:** an inline script in `dashboard/index.html` reads
+`localStorage['anchor-theme']` (`'light'` | `'dark'` | absent) and, when absent,
+falls back to `matchMedia('(prefers-color-scheme: dark)')`, toggling the
+`.dark` class before the bundle loads (no FOUC). The `ThemeToggle` component
+cycles the theme, persists the choice, and respects the system default until
+the user chooses. A media-based two-entry `<meta name="theme-color">` reflects
+bg-base per system scheme.
+
+No other colors exist in the system. No gradients, no shadows, no glow, in
+either mode.
 
 ### 2.2 Typography
 
@@ -121,6 +173,12 @@ copy, buttons, or form labels. Switzer carries every UI surface. This
 split is what keeps the "editorial, not generic-AI-tool" character; do not
 blend them within one text block.
 
+**Italics:** Fontshare's Zodiak exposes only a `wght` axis — there is no
+italic face (verified against the Fontshare API). The landing hero's single
+accent word is therefore rendered in regular serif with `text-accent`; the
+recall demo in the hero carries the emphasis instead. Never fake an italic
+with a fallback font or a synthetic slant.
+
 ### 2.3 Spacing Rhythm
 
 8px base unit. Scale: `4, 8, 12, 16, 24, 32, 48, 64, 96`.
@@ -140,16 +198,26 @@ blend them within one text block.
   hover; secondary = transparent fill, `border-default`, text in
   `text-primary`; both 8px radius, Switzer 500.
 - **Inputs**: `bg-sunken`, 1px `border-default`, 8px radius, focus ring =
-  2px `border-accent` outline, no glow/shadow.
-- **Code blocks**: always `code-bg`/`code-text`, JetBrains Mono, 8px
-  radius, copy-button top-right (see §5.3 for behavior).
+  2px `border-accent` outline (`box-shadow: 0 0 0 2px rgb(var(--border-accent))`),
+  no glow/shadow. Selection also uses the `border-accent`/`text-primary` tokens
+  so it flips in dark mode.
+- **Code blocks**: always `code-bg`/`code-text` (dark in both modes), JetBrains
+  Mono, 8px radius, copy-button top-right (see §5.3 for behavior).
 - **Status badges**: pill shape, `body-sm`, colored text on a 12%-opacity
   tint of the same status color as background (e.g. success badge =
-  `status-success` text on `#1A6B4A1F`).
+  `text-status-success` on `bg-status-success/12`). The `/12` step lives in
+  the config's `opacity` scale.
 - **Capability icons**: line-weight SVG icons only (stroke, not fill), 1.5px
   stroke, `text-secondary` at rest / `accent` on the active card — no icon
   library dependency (hand-authored SVGs, keeps the "no paid icons"
   constraint trivially true and avoids generic icon-pack look).
+- **Theme toggle**: a small icon button (sun/moon, hand-drawn 1.5px line
+  stroke matching the icon system) that cycles light↔dark, persists to
+  `localStorage['anchor-theme']`, and sits in the landing NavBar, the
+  dashboard header, and the docs header/sidebar.
+- **Decorative notch**: a single 12px `clip-path` corner utility
+  (`.clip-corner`) exists for the landing recall terminal only. Never on
+  buttons or cards, so focus rings always survive.
 
 ### 2.5 Product Surface Discipline (owner directive — non-negotiable)
 
@@ -205,12 +273,18 @@ section, no marketing filler, no fake stats, no generic tile grid.
 
 ```
 LandingPage
-├─ NavBar (wordmark, "Docs" link, "Sign in" button)
+├─ NavBar (wordmark, theme toggle, "Docs" link, "Sign in" button)
 ├─ Hero — the pain, not the pitch
 │   ├─ Headline (Zodiak display-xl): "Every session, you re-explain everything."
+│   │   — the word "re-explain" is the accent word, regular serif in
+│   │   text-accent (Zodiak has no italic face on Fontshare — see §2.2)
 │   ├─ Subhead (body-lg): "Anchor remembers what your agents already know.
 │   │   Search, store, and recall context across every runtime."
-│   └─ CTA → /login ("Open dashboard")
+│   ├─ CTA → /login ("Open dashboard")
+│   └─ Recall demo — a clipped-corner JetBrains Mono terminal (.code-block
+│       tokens) that types `$ anchor_recall "what did we learn?"` then
+│       returns three stored memory lines; ~3s loop, static final state
+│       under prefers-reduced-motion. Product proof, not decoration.
 ├─ HowItWorks — the 3-step fix (the story, not a feature grid)
 │   └─ StepRow × 3: 1 · Search — "Ask anything. Get answers — and what you
 │       already knew." 2 · It remembers — "What you learn is kept, so you
@@ -228,6 +302,10 @@ LandingPage
 │   Antigravity; logotype-free — avoids third-party trademark art)
 └─ Footer (docs link, GitHub link if public, no social icons)
 ```
+
+Section entrances use one scroll-reveal treatment: IntersectionObserver,
+opacity 0→1 with an 8px rise over 400ms ease-out, a slight stagger on the
+capability cards, and no transform at all under `prefers-reduced-motion`.
 
 Zero occurrences anywhere of: provider/database names (§2.5 Rule 1),
 "working/under construction/version" language (§2.5 Rule 2), fake metrics,
@@ -319,16 +397,24 @@ vocabulary; zero tech-stack names.
 
 ```
 DocsLayout
-├─ DocsSidebar — grouped sections with anchor links:
+├─ DocsSidebar — grouped sections with anchor links; theme toggle next to
+│   the wordmark on desktop and in the mobile header:
 │   Overview: Introduction (/docs), Quickstart (/docs/quickstart)
 │   Capabilities: Search, Dev Search, Memory (/docs/capabilities/*)
 │   Reference: API Reference (/docs/api-reference#authentication,
 │     #transport, #error-codes, #rate-limits), Troubleshooting
-└─ DocsContent (per-route)
+└─ DocsContent (per-route) — every page opens with a one-line
+    "What you'll accomplish" statement and a consistent Prerequisites box
+    (both built from the locked tokens via docs-ui helpers):
     ├─ DocsHomePage — Introduction: what Anchor is, the 3-capability
-    │   narrative, link to Quickstart
+    │   narrative, a compact Concepts glossary (agent key / capability /
+    │   runtime / auto-recall / memory — one line each), both config forms,
+    │   link to Quickstart
     ├─ QuickstartPage — mirrors OnboardingFlow content, static (no auth
-    │   calls); "2-minute setup" lead
+    │   calls); "2-minute setup" lead. Every config snippet appears in BOTH
+    │   forms: the Claude Code `.mcp.json` block (claude mcp add) and the
+    │   OpenCode `mcp` block (opencode mcp add), with keys shown as
+    │   `anchor_…` placeholders and copy buttons throughout
     ├─ CapabilityPage × 3 — data-driven from content/capability-pages-data.ts
     │   (predecessor's ToolPageData pattern, adapted): id, name, description,
     │   bestFor[], what it does, the problem it solves, input schema table
@@ -341,9 +427,13 @@ DocsLayout
     │   (agent-key bearer), transport (Streamable HTTP, protocol
     │   2025-11-25), error codes (all 7 rows), rate limits (30/min,
     │   500/day per agent)
-    └─ TroubleshootingPage — one ErrorCard per platform error code
-        (backend.md §8 table)
+    └─ TroubleshootingPage — one error card per platform error code
+        (backend.md §8 table); each card follows a Cause → What you will
+        see → Fix structure, imperative and calm, no "just/quickly/simply"
 ```
+
+Docs typography: h1/h2 in Zodiak display, prose paragraphs capped at
+`max-w-prose` (`prose-copy` utility), tokens/keys/endpoints in mono.
 
 **Consistency rule**: the human docs and the agent-facing guide
 (`worker/src/tools/guide.ts` GUIDE_CONTENT) must describe the same 5 tools

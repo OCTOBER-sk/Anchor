@@ -171,7 +171,7 @@ function DangerZone() {
       </div>
 
       {confirmOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1A1A1880] px-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/50 px-6">
           <div role="dialog" aria-modal="true" aria-labelledby="revoke-all-title" className="card w-full max-w-sm p-6">
             <h3 id="revoke-all-title" className="font-display font-semibold text-display-md text-text-primary">
               Revoke all {activeCount} agent {activeCount === 1 ? 'key' : 'keys'}?
@@ -180,7 +180,7 @@ function DangerZone() {
               Runtimes using them lose access immediately.
             </p>
             {revokeError ? (
-              <p className="mt-4 rounded-card border border-status-error bg-[#B91C1C1F] px-4 py-3 text-body-sm text-status-error" role="alert">
+              <p className="mt-4 rounded-card border border-status-error bg-status-error/12 px-4 py-3 text-body-sm text-status-error" role="alert">
                 {revokeError}
               </p>
             ) : null}

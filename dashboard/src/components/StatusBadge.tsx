@@ -6,8 +6,8 @@
 export function StatusBadge({ status }: { status: 'active' | 'revoked' }) {
   const tone =
     status === 'active'
-      ? 'bg-[#1A6B4A1F] text-status-success'
-      : 'bg-[#6E6E681F] text-text-tertiary';
+      ? 'bg-status-success/12 text-status-success'
+      : 'bg-text-tertiary/12 text-text-tertiary';
 
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-body-sm font-medium ${tone}`}>

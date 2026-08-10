@@ -42,7 +42,8 @@ export function ActivitySparkline({ items }: { items: ActivityItem[] }) {
       height={HEIGHT}
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       fill="none"
-      stroke={hasActivity ? '#1A6B4A' : '#C8C4BB'}
+      className={hasActivity ? 'text-accent' : 'text-border-strong'}
+      stroke="currentColor"
       strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -54,7 +55,7 @@ export function ActivitySparkline({ items }: { items: ActivityItem[] }) {
         cx={WIDTH}
         cy={HEIGHT - PADDING_Y - (counts[DAYS - 1] / max) * (HEIGHT - 2 * PADDING_Y)}
         r="2"
-        fill={hasActivity ? '#1A6B4A' : 'none'}
+        fill={hasActivity ? 'currentColor' : 'none'}
         stroke="none"
       />
     </svg>

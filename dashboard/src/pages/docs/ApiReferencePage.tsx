@@ -8,7 +8,7 @@ import {
   toolsListData,
   transportData,
 } from '../../content/api-reference-data';
-import { KeyValueTable, OutputTable, PageHeader, SchemaTable, Section } from './docs-ui';
+import { KeyValueTable, OutputTable, PageHeader, Prerequisites, SchemaTable, Section, WhatYouWillAccomplish } from './docs-ui';
 
 /**
  * API reference — frontend.md §3.7. The MCP protocol surface from backend.md
@@ -63,17 +63,23 @@ export function ApiReferencePage() {
         lead="The protocol surface behind the Anchor capabilities. Every tool, schema, error, and limit below is what a connected runtime actually sees."
       />
 
+      <WhatYouWillAccomplish>
+        Understand the full protocol surface a connected runtime sees: authentication, transport, tools, schemas,
+        errors, and limits.
+      </WhatYouWillAccomplish>
+      <Prerequisites items={['Familiarity with the quickstart connection', 'An agent key to test with (optional)']} />
+
       <Section id="authentication" title="Authentication">
-        <p className="text-body-md leading-relaxed text-text-secondary">
+        <p className="prose-copy">
           Every request to the MCP endpoint must carry an agent key as a bearer token. This is the same key you
           create in the dashboard — one per runtime.
         </p>
         <CodeBlock code={authenticationData.headerExample} />
-        <p className="text-body-md leading-relaxed text-text-secondary">
+        <p className="prose-copy">
           Keys take the form <code className="code-inline">{authenticationData.keyFormat}</code>: a URL-safe
           slug identifying the runtime, then a 32-character hex secret.
         </p>
-        <ul className="list-disc space-y-2 pl-5 text-body-md leading-relaxed text-text-secondary">
+        <ul className="list-disc space-y-2 pl-5 prose-copy">
           {authenticationData.notes.map((note) => (
             <li key={note}>{note}</li>
           ))}
@@ -82,7 +88,7 @@ export function ApiReferencePage() {
 
       <Section id="transport" title="Transport">
         <KeyValueTable rows={transportData.rows} />
-        <ul className="list-disc space-y-2 pl-5 text-body-md leading-relaxed text-text-secondary">
+        <ul className="list-disc space-y-2 pl-5 prose-copy">
           {transportData.notes.map((note) => (
             <li key={note}>{note}</li>
           ))}
@@ -90,7 +96,7 @@ export function ApiReferencePage() {
       </Section>
 
       <Section id="initialize" title="initialize">
-        <p className="text-body-md leading-relaxed text-text-secondary">
+        <p className="prose-copy">
           The handshake a runtime performs first. It negotiates the protocol version and returns the server
           identity.
         </p>
@@ -109,7 +115,7 @@ export function ApiReferencePage() {
       </Section>
 
       <Section id="tools-list" title="tools/list">
-        <p className="text-body-md leading-relaxed text-text-secondary">
+        <p className="prose-copy">
           Returns exactly five tools. Each carries its input schema, so a runtime knows how to call it without
           any external documentation.
         </p>
@@ -129,7 +135,7 @@ export function ApiReferencePage() {
             <article key={tool.name} className="space-y-8">
               <div className="space-y-3">
                 <h3 className="font-mono text-mono-md font-medium text-code-accent">{tool.name}</h3>
-                <p className="text-body-md leading-relaxed text-text-secondary">{tool.description}</p>
+                <p className="prose-copy">{tool.description}</p>
               </div>
 
               <div className="space-y-4">
@@ -158,7 +164,7 @@ export function ApiReferencePage() {
       </Section>
 
       <Section id="error-codes" title="Error codes">
-        <p className="text-body-md leading-relaxed text-text-secondary">
+        <p className="prose-copy">
           Every error maps to a JSON-RPC code. The message is always safe to display — internal detail is
           logged on the server and never returned.
         </p>
@@ -167,7 +173,7 @@ export function ApiReferencePage() {
 
       <Section id="rate-limits" title="Rate limits">
         <KeyValueTable rows={rateLimitData.rows} />
-        <ul className="list-disc space-y-2 pl-5 text-body-md leading-relaxed text-text-secondary">
+        <ul className="list-disc space-y-2 pl-5 prose-copy">
           {rateLimitData.notes.map((note) => (
             <li key={note}>{note}</li>
           ))}

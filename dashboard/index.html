@@ -8,6 +8,20 @@
       name="description"
       content="Anchor is the memory layer for your AI agents — remote MCP search and persistent memory across runtimes."
     />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FAF8F4" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0E0F0D" />
+    <script>
+      (function () {
+        var stored = null;
+        try {
+          stored = localStorage.getItem('anchor-theme');
+        } catch (e) {}
+        var dark =
+          stored === 'dark' ||
+          (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', dark);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

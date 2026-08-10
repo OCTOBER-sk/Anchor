@@ -5,7 +5,7 @@
  */
 export function ErrorCard({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="flex flex-col gap-3 rounded-card border border-status-error bg-[#B91C1C1F] p-6" role="alert">
+    <div className="flex flex-col gap-3 rounded-card border border-status-error bg-status-error/12 p-6" role="alert">
       <div className="flex items-center gap-2">
         <span className="text-status-error" aria-hidden="true">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

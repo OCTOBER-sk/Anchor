@@ -25,8 +25,8 @@ function ActivityIcon() {
 function StatusPill({ status }: { status: ActivityItem['status'] }) {
   const tone =
     status === 'success'
-      ? 'bg-[#1A6B4A1F] text-status-success'
-      : 'bg-[#B91C1C1F] text-status-error';
+      ? 'bg-status-success/12 text-status-success'
+      : 'bg-status-error/12 text-status-error';
   return (
     <span className={`inline-flex rounded-full px-2.5 py-0.5 text-body-sm font-medium ${tone}`}>
       {status === 'success' ? 'Success' : 'Failed'}

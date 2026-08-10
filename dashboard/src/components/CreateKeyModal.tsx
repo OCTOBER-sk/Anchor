@@ -132,7 +132,7 @@ export function CreateKeyModal({ open, onClose, onCreate }: CreateKeyModalProps)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#1A1A1880] px-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/50 px-6"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) attemptClose();
       }}
@@ -202,7 +202,7 @@ export function CreateKeyModal({ open, onClose, onCreate }: CreateKeyModalProps)
             ) : null}
 
             {createError ? (
-              <p className="rounded-card border border-status-error bg-[#B91C1C1F] px-4 py-3 text-body-sm text-status-error" role="alert">
+              <p className="rounded-card border border-status-error bg-status-error/12 px-4 py-3 text-body-sm text-status-error" role="alert">
                 {createError}
               </p>
             ) : null}
@@ -225,7 +225,7 @@ export function CreateKeyModal({ open, onClose, onCreate }: CreateKeyModalProps)
               <p className="mt-1 text-body-sm text-text-secondary">Copy it now — you'll use it to connect a runtime.</p>
             </header>
 
-            <div className="rounded-card border border-status-warning bg-[#B453091F] px-4 py-3 text-body-sm text-status-warning">
+            <div className="rounded-card border border-status-warning bg-status-warning/12 px-4 py-3 text-body-sm text-status-warning">
               You won't be able to see this key again after you close this window.
             </div>
 
@@ -256,7 +256,7 @@ export function CreateKeyModal({ open, onClose, onCreate }: CreateKeyModalProps)
         )}
 
         {confirmingClose ? (
-          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-card bg-[#FAF8F4F2] p-8">
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-card bg-bg-base/95 p-8">
             <div className="card w-full max-w-sm p-6">
               <h3 className="font-display font-semibold text-display-md text-text-primary">
                 This key won't be shown again.

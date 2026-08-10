@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { CodeBlock } from '../../components/CodeBlock';
+
 /**
  * Shared presentational building blocks for the docs pages — frontend.md
  * §3.7. All styling stays inside the locked token set (§2.1/§2.4).
@@ -11,6 +13,40 @@ export function PageHeader({ title, lead }: { title: string; lead?: string }) {
       <h1 className="font-display font-semibold text-display-lg text-text-primary">{title}</h1>
       {lead ? <p className="max-w-2xl text-body-lg leading-relaxed text-text-secondary">{lead}</p> : null}
     </header>
+  );
+}
+
+/** One-line outcome statement that opens every docs page. */
+export function WhatYouWillAccomplish({ children }: { children: ReactNode }) {
+  return (
+    <p className="mt-6 max-w-prose text-body-md leading-relaxed text-text-secondary">
+      <span className="font-medium text-text-primary">What you'll accomplish: </span>
+      {children}
+    </p>
+  );
+}
+
+/** Compact prerequisites box — consistent on every docs page. */
+export function Prerequisites({ items }: { items: string[] }) {
+  return (
+    <div className="mt-6 rounded-card border border-border-default bg-bg-sunken px-5 py-4">
+      <p className="font-body text-body-sm font-medium text-text-tertiary">Prerequisites</p>
+      <ul className="mt-2 list-disc space-y-1 pl-5 text-body-sm leading-relaxed text-text-secondary">
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** A mono-labeled config snippet (CodeBlock already carries the copy button). */
+export function Snippet({ label, code }: { label: string; code: string }) {
+  return (
+    <div className="space-y-2">
+      <p className="font-mono text-mono-sm text-text-tertiary">{label}</p>
+      <CodeBlock code={code} />
+    </div>
   );
 }
 
