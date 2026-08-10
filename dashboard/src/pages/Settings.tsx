@@ -1,49 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { AgentKeysList } from '../components/AgentKeysList';
-import { Skeleton } from '../components/Skeleton';
 import { useAgentKeys } from '../hooks/useAgentKeys';
-import { useProfile } from '../hooks/useProfile';
 import { useSession } from '../hooks/useSession';
 import { getSupabase } from '../lib/supabase';
 
 /**
  * Profile section — frontend.md §3.6. Email is read-only (it is the auth
- * identity); phone is profile metadata only (§0.1), stored via the profiles
- * table + RLS.
+ * identity); there is no other editable profile data.
  */
 function ProfileSection() {
   const { session } = useSession();
-  const { profile, isLoading, error, refetch, savePhone } = useProfile();
-  const [phone, setPhone] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const initialized = useRef(false);
-
-  const email = session?.user?.email ?? '';
-
-  useEffect(() => {
-    if (!initialized.current && profile !== null) {
-      setPhone(profile.phone ?? '');
-      initialized.current = true;
-    }
-  }, [profile]);
-
-  async function handleSave() {
-    if (isSaving) return;
-    setIsSaving(true);
-    setSaveError(null);
-    setSaved(false);
-    try {
-      await savePhone(phone);
-      setSaved(true);
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Could not save your profile. Please try again.');
-    } finally {
-      setIsSaving(false);
-    }
-  }
+  const email = session?.user?.email ?? '—';
 
   return (
     <section>
@@ -52,49 +20,6 @@ function ProfileSection() {
         <div className="p-6">
           <p className="text-body-sm text-text-tertiary">Email</p>
           <p className="mt-1 text-body-md font-medium text-text-primary">{email}</p>
-        </div>
-        <div className="p-6">
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-body-sm font-medium text-text-primary">
-              Phone <span className="font-normal text-text-tertiary">(optional)</span>
-            </p>
-            {saved ? <p className="shrink-0 text-body-sm text-status-success">Saved</p> : null}
-          </div>
-          <p className="mt-1 text-body-sm text-text-secondary">Optional — stored with your profile.</p>
-
-          {isLoading && profile === null ? (
-            <Skeleton className="mt-3 h-11 sm:max-w-xs" />
-          ) : error !== null ? (
-            <div className="mt-3">
-              <p className="text-body-sm text-status-error">{error.message}</p>
-              <button type="button" onClick={() => void refetch()} className="btn-secondary btn-small mt-3">
-                Try again
-              </button>
-            </div>
-          ) : (
-            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <input
-                id="settings-phone"
-                type="tel"
-                autoComplete="tel"
-                value={phone}
-                onChange={(event) => {
-                  setPhone(event.target.value);
-                  setSaved(false);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') void handleSave();
-                }}
-                className="input sm:max-w-xs"
-                placeholder="+1 555 000 0000"
-              />
-              <button type="button" onClick={() => void handleSave()} disabled={isSaving} className="btn-secondary sm:shrink-0">
-                {isSaving ? 'Saving…' : 'Save'}
-              </button>
-            </div>
-          )}
-
-          {saveError ? <p className="mt-2 text-body-sm text-status-error">{saveError}</p> : null}
         </div>
       </div>
     </section>
@@ -205,7 +130,7 @@ function DangerZone() {
 }
 
 /**
- * Settings — frontend.md §3.6. A Configure surface: profile (email + phone),
+ * Settings — frontend.md §3.6. A Configure surface: profile (read-only email),
  * agent keys (the shared list + create modal), and a confirm-gated danger
  * zone with sign out.
  */
