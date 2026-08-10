@@ -61,7 +61,7 @@ async function verifySupabaseJwt(request: Request, env: Env): Promise<SupabaseUs
   }
   try {
     const res = await safeFetch(`${env.SUPABASE_URL}/auth/v1/user`, {
-      headers: { Authorization: `Bearer ${token}`, apikey: token },
+      headers: { Authorization: `Bearer ${token}`, apikey: env.SUPABASE_ANON_KEY },
     }, { allowedHosts: ['*.supabase.co'] });
     if (res.status !== 200) {
       return null;

@@ -91,6 +91,7 @@ export async function buildTestEnv(overrides: Partial<Env> = {}): Promise<Env> {
     RESPONSE_CACHE: createMemoryKV() as unknown as KVNamespace,
     TURSO_DATABASE_URL: 'libsql://test.turso.io',
     TURSO_AUTH_TOKEN: 'test-token',
+    SUPABASE_ANON_KEY: 'test-anon',
     SUPABASE_URL: 'https://test.supabase.co',
     SUPABASE_SERVICE_ROLE_KEY: 'test',
     CEREBRAS_API_KEY: 'csk-test',

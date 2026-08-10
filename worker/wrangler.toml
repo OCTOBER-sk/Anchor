@@ -4,15 +4,15 @@ compatibility_date = "2026-08-01"
 
 [[kv_namespaces]]
 binding = "AGENT_KEYS"
-id = "<provisioned-at-deploy>"
+id = "f2443091f72c4ccc8938aa8bff3e1d55"
 
 [[kv_namespaces]]
 binding = "RATE_LIMIT"
-id = "<provisioned-at-deploy>"
+id = "ce7af9757deb44fd975d3eb47beccb4b"
 
 [[kv_namespaces]]
 binding = "RESPONSE_CACHE"
-id = "<provisioned-at-deploy>"
+id = "f2e342c2ca2b43ae9fdcf5432e5d26ab"
 
 [triggers]
 crons = ["0 0 */4 * *"]

@@ -16,8 +16,9 @@ export interface Env {
   RESPONSE_CACHE: KVNamespace;
   TURSO_DATABASE_URL: string;
   TURSO_AUTH_TOKEN: string;
-  SUPABASE_URL: string;
+  SUPABASE_ANON_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
+  SUPABASE_URL: string;
   CEREBRAS_API_KEY: string;
   GEMINI_API_KEY: string;
   TAVILY_API_KEY: string;

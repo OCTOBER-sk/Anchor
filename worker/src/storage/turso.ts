@@ -92,8 +92,12 @@ function toUrl(input: RequestInfo | URL): string {
   return input.url;
 }
 
-function tursoFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  return safeFetch(toUrl(input), init ?? {}, {
+export function tursoFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const headers = init?.headers ?? (input instanceof Request ? input.headers : undefined);
+  const body = init?.body ?? (input instanceof Request ? input.body : undefined);
+  const method = init?.method ?? (input instanceof Request ? input.method : undefined);
+  const requestInit: RequestInit = { method, headers, body, ...init };
+  return safeFetch(toUrl(input), requestInit, {
     allowedSchemes: TURSO_ALLOWED_SCHEMES,
     allowedHosts: TURSO_ALLOWED_HOSTS,
     timeoutMs: TURSO_TIMEOUT_MS,
