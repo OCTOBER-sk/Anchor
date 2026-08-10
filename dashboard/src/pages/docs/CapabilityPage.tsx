@@ -114,7 +114,7 @@ export function CapabilityPage() {
         <div className="space-y-8">
           {data.workedExamples.map((example) => (
             <div key={example.title} className="space-y-3">
-              <h3 className="font-body text-body-lg font-semibold text-text-primary">{example.title}</h3>
+              <h3 className="font-body text-body-lg font-medium text-text-primary">{example.title}</h3>
               <p className="text-body-sm leading-relaxed text-text-secondary">{example.note}</p>
               <CodeBlock code={example.code} />
             </div>

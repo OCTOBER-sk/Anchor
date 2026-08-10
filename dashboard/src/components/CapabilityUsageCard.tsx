@@ -70,7 +70,7 @@ export function CapabilityUsageCard({
             {capabilityIcons[id]()}
           </span>
           <div>
-            <h3 className="font-body text-body-md font-semibold text-text-primary">{name}</h3>
+            <h3 className="font-body text-body-md font-medium text-text-primary">{name}</h3>
             <p className="mt-0.5 text-body-sm text-text-tertiary">{description}</p>
           </div>
         </div>
@@ -82,7 +82,7 @@ export function CapabilityUsageCard({
           {isLoading ? (
             <Skeleton className="h-9 w-16" />
           ) : (
-            <p className="font-display font-semibold text-display-md leading-none text-text-primary">{count}</p>
+            <p className="font-display font-medium text-display-md leading-none text-text-primary">{count}</p>
           )}
           <p className="mt-1 text-body-sm text-text-tertiary">calls this month</p>
         </div>

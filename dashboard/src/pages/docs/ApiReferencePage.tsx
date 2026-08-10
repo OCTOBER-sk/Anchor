@@ -102,12 +102,12 @@ export function ApiReferencePage() {
         </p>
         <div className="space-y-6">
           <div className="space-y-3">
-            <h3 className="font-body text-body-lg font-semibold text-text-primary">Request</h3>
+            <h3 className="font-body text-body-lg font-medium text-text-primary">Request</h3>
             <OutputTable fields={initializeData.requestFields} />
             <CodeBlock code={initializeData.requestExample} />
           </div>
           <div className="space-y-3">
-            <h3 className="font-body text-body-lg font-semibold text-text-primary">Response</h3>
+            <h3 className="font-body text-body-lg font-medium text-text-primary">Response</h3>
             <OutputTable fields={initializeData.responseFields} />
             <CodeBlock code={initializeData.responseExample} />
           </div>
@@ -139,7 +139,7 @@ export function ApiReferencePage() {
               </div>
 
               <div className="space-y-4">
-                <h4 className="font-body text-body-lg font-semibold text-text-primary">Behavior</h4>
+                <h4 className="font-body text-body-lg font-medium text-text-primary">Behavior</h4>
                 <ul className="list-disc space-y-2 pl-5 text-body-sm leading-relaxed text-text-secondary">
                   {tool.behavior.map((point) => (
                     <li key={point}>{point}</li>
@@ -148,13 +148,13 @@ export function ApiReferencePage() {
               </div>
 
               <div className="space-y-4">
-                <h4 className="font-body text-body-lg font-semibold text-text-primary">Input</h4>
+                <h4 className="font-body text-body-lg font-medium text-text-primary">Input</h4>
                 <SchemaTable rows={tool.inputRows} />
                 <CodeBlock code={tool.inputExample} />
               </div>
 
               <div className="space-y-4">
-                <h4 className="font-body text-body-lg font-semibold text-text-primary">Output</h4>
+                <h4 className="font-body text-body-lg font-medium text-text-primary">Output</h4>
                 <OutputTable fields={tool.outputFields} />
                 <CodeBlock code={tool.outputExample} />
               </div>

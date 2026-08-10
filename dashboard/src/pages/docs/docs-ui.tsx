@@ -10,7 +10,7 @@ import { CodeBlock } from '../../components/CodeBlock';
 export function PageHeader({ title, lead }: { title: string; lead?: string }) {
   return (
     <header className="space-y-4">
-      <h1 className="font-display font-semibold text-display-lg text-text-primary">{title}</h1>
+      <h1 className="font-display font-medium text-display-lg text-text-primary">{title}</h1>
       {lead ? <p className="max-w-2xl text-body-lg leading-relaxed text-text-secondary">{lead}</p> : null}
     </header>
   );
@@ -61,7 +61,7 @@ export function Section({
 }) {
   return (
     <section id={id} className="mt-16 scroll-mt-8 first:mt-0">
-      <h2 className="font-display font-semibold text-display-md text-text-primary">{title}</h2>
+      <h2 className="font-display font-medium text-display-md text-text-primary">{title}</h2>
       <div className="mt-6 space-y-6">{children}</div>
     </section>
   );

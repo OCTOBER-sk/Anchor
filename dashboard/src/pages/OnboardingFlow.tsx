@@ -83,7 +83,7 @@ function KeyRevealCard({
   return (
     <div className="card relative p-8">
       <header>
-        <h2 className="font-display font-semibold text-display-md text-text-primary">Your agent key</h2>
+        <h2 className="font-display font-medium text-display-md text-text-primary">Your agent key</h2>
         <p className="mt-1 text-body-sm text-text-secondary">Copy it now — you'll use it to connect a runtime.</p>
       </header>
 
@@ -251,7 +251,7 @@ export function OnboardingFlow() {
         {step === 1 && !revealed ? (
           <div className="card p-8">
             <header>
-              <h2 className="font-display font-semibold text-display-md text-text-primary">Create an agent key</h2>
+              <h2 className="font-display font-medium text-display-md text-text-primary">Create an agent key</h2>
               <p className="mt-1 text-body-sm text-text-secondary">
                 Give this key a name you'll recognize — for example, "Claude Code Laptop".
               </p>
@@ -308,7 +308,7 @@ export function OnboardingFlow() {
         ) : step === 2 ? (
           <div>
             <header>
-              <h2 className="font-display font-semibold text-display-md text-text-primary">Choose a runtime</h2>
+              <h2 className="font-display font-medium text-display-md text-text-primary">Choose a runtime</h2>
               <p className="mt-1 text-body-sm text-text-secondary">
                 Anchor works with the runtimes you already use. Pick the one you'll connect.
               </p>
@@ -344,7 +344,7 @@ export function OnboardingFlow() {
         ) : step === 3 ? (
           <div>
             <header>
-              <h2 className="font-display font-semibold text-display-md text-text-primary">Add Anchor to your runtime</h2>
+              <h2 className="font-display font-medium text-display-md text-text-primary">Add Anchor to your runtime</h2>
               <p className="mt-1 text-body-sm text-text-secondary">One config block, one endpoint — only the file differs per runtime.</p>
             </header>
 
@@ -384,7 +384,7 @@ export function OnboardingFlow() {
         ) : step === 4 ? (
           <div>
             <header>
-              <h2 className="font-display font-semibold text-display-md text-text-primary">Validate the connection</h2>
+              <h2 className="font-display font-medium text-display-md text-text-primary">Validate the connection</h2>
               <p className="mt-1 text-body-sm text-text-secondary">
                 Anchor checks the endpoint with your new key before you leave.
               </p>
@@ -463,7 +463,7 @@ export function OnboardingFlow() {
       {confirming !== null ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/50 px-6">
           <div role="dialog" aria-modal="true" aria-labelledby="onboarding-dismiss-title" className="card w-full max-w-sm p-6">
-            <h3 id="onboarding-dismiss-title" className="font-display font-semibold text-display-md text-text-primary">
+            <h3 id="onboarding-dismiss-title" className="font-display font-medium text-display-md text-text-primary">
               This key won't be shown again.
             </h3>
             <p className="mt-2 text-body-sm text-text-secondary">Copy it now?</p>

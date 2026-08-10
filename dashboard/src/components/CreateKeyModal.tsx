@@ -146,7 +146,7 @@ export function CreateKeyModal({ open, onClose, onCreate }: CreateKeyModalProps)
         {step === 'name' ? (
           <div className="flex flex-col gap-6">
             <header>
-              <h2 id="create-key-title" className="font-display font-semibold text-display-md text-text-primary">
+              <h2 id="create-key-title" className="font-display font-medium text-display-md text-text-primary">
                 New agent key
               </h2>
               <p className="mt-1 text-body-sm text-text-secondary">{NAME_HINT}</p>
@@ -219,7 +219,7 @@ export function CreateKeyModal({ open, onClose, onCreate }: CreateKeyModalProps)
         ) : (
           <div className="flex flex-col gap-6">
             <header>
-              <h2 id="create-key-reveal-title" className="font-display font-semibold text-display-md text-text-primary">
+              <h2 id="create-key-reveal-title" className="font-display font-medium text-display-md text-text-primary">
                 Your agent key
               </h2>
               <p className="mt-1 text-body-sm text-text-secondary">Copy it now — you'll use it to connect a runtime.</p>
@@ -258,7 +258,7 @@ export function CreateKeyModal({ open, onClose, onCreate }: CreateKeyModalProps)
         {confirmingClose ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center rounded-card bg-bg-base/95 p-8">
             <div className="card w-full max-w-sm p-6">
-              <h3 className="font-display font-semibold text-display-md text-text-primary">
+              <h3 className="font-display font-medium text-display-md text-text-primary">
                 This key won't be shown again.
               </h3>
               <p className="mt-2 text-body-sm text-text-secondary">Copy it now?</p>

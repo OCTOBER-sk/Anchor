@@ -72,7 +72,7 @@ function CapabilityUsageGrid({
 
   return (
     <section>
-      <h2 className="font-display font-semibold text-display-md text-text-primary">Capabilities</h2>
+      <h2 className="font-display font-medium text-display-md text-text-primary">Capabilities</h2>
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         {CAPABILITIES.map((capability) => {
           const byCapability = usage.data?.byCapability[capability.id] ?? { count: 0, lastUsedAt: null };

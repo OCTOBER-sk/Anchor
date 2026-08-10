@@ -10,10 +10,10 @@ export function ConfigMissingState() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-16">
       <div className="w-full max-w-sm card p-8 text-center">
-        <Link to="/" className="font-display font-semibold text-display-md text-text-primary">
+        <Link to="/" className="font-display font-medium text-display-md text-text-primary">
           Anchor
         </Link>
-        <p className="mt-8 font-display font-semibold text-display-md text-text-primary">
+        <p className="mt-8 font-display font-medium text-display-md text-text-primary">
           Anchor isn't configured yet.
         </p>
         <p className="mt-3 text-body-md text-text-secondary">

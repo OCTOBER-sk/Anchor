@@ -64,14 +64,15 @@ pages — all explicitly out of scope per `backend.md` §1.
 ### 2.1 Tokens (locked — verbatim)
 
 Color tokens are **space-separated RGB triplets** declared as CSS variables in
-`src/styles/globals.css`. `:root` holds the warm-paper **light** palette
-(primary mode, unchanged); `.dark` holds the warm-paper **dark** palette.
-`tailwind.config.ts` maps every token into a utility as
+`src/styles/globals.css`. `:root` holds the warm-paper light palette
+(kept verbatim, no longer reachable); `.dark` holds the warm-paper **dark**
+palette. `tailwind.config.ts` maps every token into a utility as
 `rgb(var(--token) / <alpha-value>)` with `darkMode: 'class'`, so every surface
 — backgrounds, text hierarchy, borders, status colors, code blocks, selection,
-focus rings — flips when `.dark` is present on `<html>`. Opacity modifiers
-(`/50`, `/12`, …) work everywhere; the `/12` status tint is a named step in
-the config's `opacity` scale.
+focus rings — resolves against the dark palette because the app is
+**dark-only**: `.dark` is forced on `<html>` before first paint. Opacity
+modifiers (`/50`, `/12`, …) work everywhere; the `/12` status tint is a named
+step in the config's `opacity` scale.
 
 **Light (`:root`) — warm paper, primary mode:**
 
@@ -136,13 +137,14 @@ Code-block colors are dark in **both** modes (they already were). A single
 `--overlay` token (the light-mode `text-primary` RGB, rendered at `/50`) is
 the modal/scrim backdrop in both modes — modals stay dimmed in dark mode too.
 
-**Theme switching:** an inline script in `dashboard/index.html` reads
-`localStorage['anchor-theme']` (`'light'` | `'dark'` | absent) and, when absent,
-falls back to `matchMedia('(prefers-color-scheme: dark)')`, toggling the
-`.dark` class before the bundle loads (no FOUC). The `ThemeToggle` component
-cycles the theme, persists the choice, and respects the system default until
-the user chooses. A media-based two-entry `<meta name="theme-color">` reflects
-bg-base per system scheme.
+**Dark-only (no toggle):** a single inline script in `dashboard/index.html`
+runs before the bundle loads and forces the app dark with no flash:
+`document.documentElement.classList.add('dark')`. There is **no theme
+toggle** — no `ThemeToggle` component, no `localStorage` theme key, no
+`matchMedia` theme logic, no light-mode render path. A single
+`<meta name="theme-color" content="#0E0F0D">` matches the dark `bg-base`.
+The `:root` light palette is retained in `globals.css` only to keep the token
+block stable; nothing ever renders under it.
 
 No other colors exist in the system. No gradients, no shadows, no glow, in
 either mode.
@@ -159,19 +161,26 @@ either mode.
 
 | Token | Size | Line-height | Use |
 |---|---|---|---|
-| `display-xl` | 3.5rem | 1.1 | Landing hero only |
-| `display-lg` | 2.5rem | 1.15 | Page H1 |
-| `display-md` | 1.75rem | 1.2 | Section H2 |
-| `body-lg` | 1.125rem | 1.6 | Lead paragraphs |
-| `body-md` | 1rem | 1.6 | Default body |
+| `display-xl` | 3rem | 1.1 | Landing hero only |
+| `display-lg` | 2.25rem | 1.15 | Page H1 |
+| `display-md` | 1.5rem | 1.2 | Section H2 |
+| `body-lg` | 1.0625rem | 1.6 | Lead paragraphs |
+| `body-md` | 0.9375rem | 1.6 | Default body |
 | `body-sm` | 0.875rem | 1.5 | Meta, captions, labels |
-| `mono-md` | 0.9375rem | 1.5 | Inline code, snippets |
+| `mono-md` | 0.875rem | 1.5 | Inline code, snippets |
 | `mono-sm` | 0.8125rem | 1.4 | Key strings, table cells |
 
 Zodiak is used **only** for headlines and the wordmark — never for body
 copy, buttons, or form labels. Switzer carries every UI surface. This
 split is what keeps the "editorial, not generic-AI-tool" character; do not
 blend them within one text block.
+
+**Heading weight & tracking (sharp, editorial):** `h1`/`h2`/`h3` render at
+`font-medium` (500) with `letter-spacing: -0.01em` (globals.css base rule).
+The wordmark ("Anchor" in the landing NavBar) is `font-medium` as well. Body
+copy stays `font-normal` (400). No weight or family beyond the loaded set
+(fonts.css) — the 500 headline weight resolves against Zodiak's loaded
+400/600 faces.
 
 **Italics:** Fontshare's Zodiak exposes only a `wght` axis — there is no
 italic face (verified against the Fontshare API). The landing hero's single
@@ -211,10 +220,9 @@ with a fallback font or a synthetic slant.
   stroke, `text-secondary` at rest / `accent` on the active card — no icon
   library dependency (hand-authored SVGs, keeps the "no paid icons"
   constraint trivially true and avoids generic icon-pack look).
-- **Theme toggle**: a small icon button (sun/moon, hand-drawn 1.5px line
-  stroke matching the icon system) that cycles light↔dark, persists to
-  `localStorage['anchor-theme']`, and sits in the landing NavBar, the
-  dashboard header, and the docs header/sidebar.
+- **Dark-only (no toggle)**: the app is always dark — `.dark` is forced on
+  `<html>` before first paint; no theme toggle, no `localStorage` theme key,
+  no light-mode render path (§2.1).
 - **Decorative notch**: a single 12px `clip-path` corner utility
   (`.clip-corner`) exists for the landing recall terminal only. Never on
   buttons or cards, so focus rings always survive.
@@ -273,7 +281,7 @@ section, no marketing filler, no fake stats, no generic tile grid.
 
 ```
 LandingPage
-├─ NavBar (wordmark, theme toggle, "Docs" link, "Sign in" button)
+├─ NavBar (wordmark, "Docs" link, "Sign in" button)
 ├─ Hero — the pain, not the pitch
 │   ├─ Headline (Zodiak display-xl): "Every session, you re-explain everything."
 │   │   — the word "re-explain" is the accent word, regular serif in
@@ -397,8 +405,7 @@ vocabulary; zero tech-stack names.
 
 ```
 DocsLayout
-├─ DocsSidebar — grouped sections with anchor links; theme toggle next to
-│   the wordmark on desktop and in the mobile header:
+├─ DocsSidebar — grouped sections with anchor links:
 │   Overview: Introduction (/docs), Quickstart (/docs/quickstart)
 │   Capabilities: Search, Dev Search, Memory (/docs/capabilities/*)
 │   Reference: API Reference (/docs/api-reference#authentication,

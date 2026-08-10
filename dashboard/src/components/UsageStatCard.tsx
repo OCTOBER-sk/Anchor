@@ -11,7 +11,7 @@ export function UsageStatCard({ label, value, isLoading }: { label: string; valu
       {isLoading ? (
         <Skeleton className="mt-3 h-9 w-24" />
       ) : (
-        <p className="mt-2 font-display font-semibold text-display-md leading-none text-text-primary">{value}</p>
+        <p className="mt-2 font-display font-medium text-display-md leading-none text-text-primary">{value}</p>
       )}
     </div>
   );

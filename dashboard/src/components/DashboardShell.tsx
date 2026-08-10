@@ -4,7 +4,6 @@ import { Link, NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useSession } from '../hooks/useSession';
 import { getSupabase } from '../lib/supabase';
 import { ConfigMissingState } from './ConfigMissingState';
-import { ThemeToggle } from './ThemeToggle';
 
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Home', end: true },
@@ -53,7 +52,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       <div className="px-6 py-6">
-        <Link to="/" className="font-display font-semibold text-display-md text-text-primary" onClick={onNavigate}>
+        <Link to="/" className="font-display font-medium text-display-md text-text-primary" onClick={onNavigate}>
           Anchor
         </Link>
       </div>
@@ -232,10 +231,9 @@ export function DashboardShell() {
             >
               <MenuIcon />
             </button>
-            <h1 className="truncate font-display font-semibold text-display-md text-text-primary">{pageTitle}</h1>
+            <h1 className="truncate font-display font-medium text-display-md text-text-primary">{pageTitle}</h1>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <ThemeToggle />
             <UserMenu email={session.user.email ?? 'User'} />
           </div>
         </header>

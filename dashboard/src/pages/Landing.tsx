@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
-import { ThemeToggle } from '../components/ThemeToggle';
 import { landingCopy } from '../content/landing-copy';
 import type { CapabilityCard, CapabilityCardId } from '../content/landing-copy';
 
@@ -50,11 +49,10 @@ function NavBar() {
   return (
     <nav className="border-b border-border-default">
       <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-8">
-        <Link to="/" className="font-display font-semibold text-display-md text-text-primary">
+        <Link to="/" className="font-display font-medium text-display-md text-text-primary">
           Anchor
         </Link>
         <div className="flex items-center gap-6">
-          <ThemeToggle />
           <Link to="/docs" className="text-body-md text-text-secondary hover:text-text-primary">
             {landingCopy.nav.docsLabel}
           </Link>
@@ -221,7 +219,7 @@ function Hero() {
     <section className="px-8 py-24 md:py-32">
       <div className="mx-auto w-full max-w-5xl">
         <Reveal>
-          <h1 className="max-w-3xl font-display font-semibold text-display-lg text-text-primary md:text-display-xl">
+          <h1 className="max-w-3xl font-display font-medium text-display-lg text-text-primary md:text-display-xl">
             {headlineStart}
             <span className="text-accent">re-explain</span>
             {headlineEnd}
@@ -248,14 +246,14 @@ function HowItWorks() {
     <section className="px-8 py-16 md:py-24">
       <div className="mx-auto w-full max-w-5xl">
         <Reveal>
-          <h2 className="font-display font-semibold text-display-md text-text-primary">
+          <h2 className="font-display font-medium text-display-md text-text-primary">
             {landingCopy.howItWorks.heading}
           </h2>
         </Reveal>
         <div className="mt-8">
           {landingCopy.howItWorks.steps.map((step) => (
             <div key={step.number} className="flex gap-6 border-t border-border-default py-8 md:gap-12">
-              <span className="font-display font-semibold text-display-lg leading-none text-text-tertiary">
+              <span className="font-display font-medium text-display-lg leading-none text-text-tertiary">
                 {step.number}
               </span>
               <div>
@@ -277,7 +275,7 @@ function CapabilityCard({ card }: { card: CapabilityCard }) {
         <span className="text-text-secondary transition-colors group-hover:text-accent">
           <CapabilityIcon id={card.id} />
         </span>
-        <h3 className="font-body text-body-lg font-semibold text-text-primary">{card.name}</h3>
+        <h3 className="font-body text-body-lg font-medium text-text-primary">{card.name}</h3>
       </div>
       <p className="text-body-sm leading-relaxed text-text-secondary">{card.description}</p>
       <MockSurface card={card} />
@@ -340,7 +338,7 @@ function CapabilitySection() {
     <section className="px-8 py-16 md:py-24">
       <div className="mx-auto w-full max-w-5xl">
         <Reveal>
-          <h2 className="font-display font-semibold text-display-md text-text-primary">
+          <h2 className="font-display font-medium text-display-md text-text-primary">
             {landingCopy.capabilities.heading}
           </h2>
         </Reveal>
@@ -361,7 +359,7 @@ function RuntimeStrip() {
     <section className="px-8 py-16 md:py-24">
       <div className="mx-auto w-full max-w-5xl">
         <Reveal>
-          <h2 className="font-display font-semibold text-display-md text-text-primary">
+          <h2 className="font-display font-medium text-display-md text-text-primary">
             {landingCopy.runtimes.heading}
           </h2>
         </Reveal>
@@ -385,7 +383,7 @@ function Footer() {
     <footer className="border-t border-border-default">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-8 py-12 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="font-display font-semibold text-display-md text-text-primary">Anchor</p>
+          <p className="font-display font-medium text-display-md text-text-primary">Anchor</p>
           <p className="mt-1 text-body-sm text-text-tertiary">{landingCopy.footer.tagline}</p>
         </div>
         <div className="flex items-center gap-6">

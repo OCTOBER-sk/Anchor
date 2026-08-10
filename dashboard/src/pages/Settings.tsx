@@ -47,7 +47,7 @@ function ProfileSection() {
 
   return (
     <section>
-      <h2 className="font-display font-semibold text-display-md text-text-primary">Profile</h2>
+      <h2 className="font-display font-medium text-display-md text-text-primary">Profile</h2>
       <div className="card mt-4 divide-y divide-border-default">
         <div className="p-6">
           <p className="text-body-sm text-text-tertiary">Email</p>
@@ -142,7 +142,7 @@ function DangerZone() {
 
   return (
     <section className="space-y-4">
-      <h2 className="font-display font-semibold text-display-md text-text-primary">Danger zone</h2>
+      <h2 className="font-display font-medium text-display-md text-text-primary">Danger zone</h2>
       <div className="card flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-body-md font-medium text-text-primary">Revoke all agent keys</p>
@@ -173,7 +173,7 @@ function DangerZone() {
       {confirmOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/50 px-6">
           <div role="dialog" aria-modal="true" aria-labelledby="revoke-all-title" className="card w-full max-w-sm p-6">
-            <h3 id="revoke-all-title" className="font-display font-semibold text-display-md text-text-primary">
+            <h3 id="revoke-all-title" className="font-display font-medium text-display-md text-text-primary">
               Revoke all {activeCount} agent {activeCount === 1 ? 'key' : 'keys'}?
             </h3>
             <p className="mt-2 text-body-sm text-text-secondary">

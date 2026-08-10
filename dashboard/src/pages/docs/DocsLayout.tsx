@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 
-import { ThemeToggle } from '../../components/ThemeToggle';
-
 /**
  * Docs layout — frontend.md §3.7. Grouped sidebar (Overview / Capabilities /
  * Reference), anchor links into the API reference, and a clean collapsible
@@ -76,12 +74,11 @@ function Sidebar({ open }: { open: boolean }) {
     <aside className={`${open ? 'block' : 'hidden'} w-full shrink-0 border-b border-border-default lg:block lg:w-64 lg:border-b-0 lg:border-r`}>
       <div className="flex items-start justify-between px-6 py-6">
         <div>
-          <Link to="/" className="font-display font-semibold text-display-md text-text-primary">
+          <Link to="/" className="font-display font-medium text-display-md text-text-primary">
             Anchor
           </Link>
           <p className="mt-1 text-body-sm text-text-tertiary">Docs</p>
         </div>
-        <ThemeToggle />
       </div>
       <nav className="px-3 pb-8">
         {groups.map((group) => (
@@ -134,11 +131,10 @@ export function DocsLayout() {
   return (
     <div className="min-h-screen bg-bg-base lg:flex">
       <header className="flex h-16 items-center justify-between border-b border-border-default px-6 lg:hidden">
-        <Link to="/docs" className="font-display font-semibold text-display-md text-text-primary">
+        <Link to="/docs" className="font-display font-medium text-display-md text-text-primary">
           Docs
         </Link>
         <div className="flex items-center gap-2">
-          <ThemeToggle />
           <button
             type="button"
             onClick={() => setOpen((value) => !value)}

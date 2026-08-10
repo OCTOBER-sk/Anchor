@@ -67,7 +67,7 @@ export function ActivityFeed() {
 
   return (
     <section>
-      <h2 className="font-display font-semibold text-display-md text-text-primary">Activity</h2>
+      <h2 className="font-display font-medium text-display-md text-text-primary">Activity</h2>
 
       <div className="mt-4">
         {error ? (

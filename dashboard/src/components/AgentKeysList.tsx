@@ -168,7 +168,7 @@ function RevokeConfirmModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/50 px-6">
       <div role="dialog" aria-modal="true" aria-labelledby="revoke-key-title" className="card w-full max-w-sm p-6">
-        <h2 id="revoke-key-title" className="font-display font-semibold text-display-md text-text-primary">
+        <h2 id="revoke-key-title" className="font-display font-medium text-display-md text-text-primary">
           Revoke “{agentKey.name}”?
         </h2>
         <p className="mt-2 text-body-sm text-text-secondary">
@@ -228,7 +228,7 @@ export function AgentKeysList() {
   return (
     <section>
       <div className="flex items-center justify-between">
-        <h2 className="font-display font-semibold text-display-md text-text-primary">Agent keys</h2>
+        <h2 className="font-display font-medium text-display-md text-text-primary">Agent keys</h2>
         <button type="button" onClick={() => setModalOpen(true)} className="btn-primary btn-small">
           New agent key
         </button>

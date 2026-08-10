@@ -105,7 +105,7 @@ export function DocsHomePage() {
               to={capability.to}
               className="card-hoverable flex flex-col gap-3 p-6"
             >
-              <h3 className="font-body text-body-lg font-semibold text-text-primary">{capability.name}</h3>
+              <h3 className="font-body text-body-lg font-medium text-text-primary">{capability.name}</h3>
               <p className="text-body-sm leading-relaxed text-text-secondary">{capability.description}</p>
               <span className="mt-auto text-body-sm font-medium text-accent">Read the guide →</span>
             </Link>
