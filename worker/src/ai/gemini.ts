@@ -3,7 +3,7 @@ import { AIProviderError } from './router';
 import { safeFetch } from '../utils/safe-fetch';
 
 const GEMINI_MODEL = 'gemini-2.0-flash';
-const EMBEDDING_MODEL = 'text-embedding-004';
+const EMBEDDING_MODEL = 'gemini-embedding-001';
 const GEMINI_ALLOWED_HOSTS = ['generativelanguage.googleapis.com'];
 const REQUEST_TIMEOUT_MS = 15_000;
 

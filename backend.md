@@ -139,10 +139,10 @@ source is used and the spread is noted.
 |---|---|---|---|---|
 | Compute | Cloudflare Workers | Edge, zero cold start, matches existing MCP transport pattern | 100,000 req/day, **10ms CPU time/invocation**, 128MB memory, 50 subrequests/request | A solo dev across 5 runtimes doing ~50–150 tool calls/day uses <0.2% of the request quota. **The binding constraint is 10ms CPU/request**, not request count — see §3.1 mitigation below. |
 | Key/counter/cache storage | Workers KV | Already required for the auth pattern; sub-ms edge reads | 100k reads/day, **1,000 writes/day**, 1GB storage | Reads: trivial headroom. **Writes are tight**: every rate-limit increment is a KV write. At 500 req/day/agent × up to 5 agents = 2,500 potential increments/day, this **exceeds the 1,000/day KV write cap**. See §3.1 — this requires a design adaptation, not just monitoring. |
-| Vector memory | Supabase (Postgres + pgvector) | Native vector search, RPC functions, RLS, generous free compute | 500MB DB, 2 active projects, **auto-pauses after 7 days of inactivity**, 5GB egress, 500k edge function invocations | 500MB holds roughly 300k–500k memory rows at typical embedding + metadata size (768-dim vector ≈ 3KB row-inclusive) — effectively unlimited for one developer's personal memory corpus. **The 7-day pause is the real risk** for a personal tool used in bursts — mitigated below. |
+| Vector memory | Supabase (Postgres + pgvector) | Native vector search, RPC functions, RLS, generous free compute | 500MB DB, 2 active projects, **auto-pauses after 7 days of inactivity**, 5GB egress, 500k edge function invocations | 500MB holds roughly 300k–500k memory rows at typical embedding + metadata size (3072-dim vector ≈ 12KB row-inclusive) — effectively unlimited for one developer's personal memory corpus. **The 7-day pause is the real risk** for a personal tool used in bursts — mitigated below. |
 | Agent metadata / auth fallback | Turso (libSQL) | SQLite-at-the-edge, colocates with Workers, no pause behavior (unlike Supabase) | 100 databases, 5GB storage, 500M row reads/month, 10M row writes/month | Auth fallback reads happen only on KV miss. Even at 100% KV-miss rate (worst case), a few hundred lookups/day is negligible against 500M/month. |
 | Fast text AI | Cerebras (`gpt-oss-120b` or current default) | Sub-second inference for search summarization | **1,000,000 tokens/day**, but rate-limited to **~5 RPM / ~30k TPM per recent docs** (older sources cite 30 RPM — Cerebras's per-minute limits have tightened over 2026; confirm live in dashboard at deploy time) | Token budget is generous; **RPM is the practical ceiling** for a coding agent firing several parallel `anchor_search` calls in a burst. Mitigated by response caching (§3.1) and the AI router's fallback-to-Gemini path. |
-| Embeddings + multimodal | Gemini (`text-embedding-004` or current default embedding model) | Free embedding tier is uncapped-in-practice for personal use | Embedding: 10M tokens/minute (TPM) free. Gemini Flash (used only if Cerebras is down): ~1,500 RPD / 15 RPM | Embedding volume for auto-recall (one short query embed per search) will never approach 10M TPM. Effectively unlimited for this use case. |
+| Embeddings + multimodal | Gemini (`gemini-embedding-001` or current default embedding model) | Free embedding tier is uncapped-in-practice for personal use | Embedding: 10M tokens/minute (TPM) free. Gemini Flash (used only if Cerebras is down): ~1,500 RPD / 15 RPM | Embedding volume for auto-recall (one short query embed per search) will never approach 10M TPM. Effectively unlimited for this use case. |
 | Web search — primary | **DuckDuckGo HTML scrape/lite endpoint** | No credit metering, no daily cap in the traditional sense (subject to informal rate courtesy limits, not billed credits) | No published hard cap; treat as "free but must be well-behaved" (backoff on 429/CAPTCHA responses) | Bears the majority of search volume by design — see decision below. |
 | Web search — secondary/quality boost | Tavily | AI-native search + extraction, better result quality than raw DDG scraping | **⚠ REVISED FROM BRIEF: 1,000 credits/month (not ~250/day as originally assumed)** — basic search = 1 credit, advanced = 2 credits. 1,000 credits ≈ 33 basic searches/day if spread evenly, or usable as a smaller quality-tier budget | See §3.1 — Tavily is demoted to secondary/quality-boost role specifically because of this revised number, with a budget guard that falls back to DDG-only once the monthly pool is low. |
 | Web search — fallback/tertiary | Apify (actor-based scrape) | Handles DDG/Tavily outage or JS-heavy targets | ~$5 free credit/month on signup-based actors (varies by actor pricing; budget-guard to $4.50/mo ceiling per original spec) | Rarely invoked; reserved for provider-chain exhaustion. |
@@ -1071,17 +1071,17 @@ create table if not exists memories (
   owner_id        text not null,              -- developer account id (see auth/ownership.ts)
   agent_id        text not null,               -- which agent key wrote this (for provenance, not access control)
   content         text not null,
-  embedding       vector(768) not null,        -- matches Gemini text-embedding-004 dimensionality; confirm against active model at deploy time
+  embedding       vector(3072) not null,       -- matches Gemini gemini-embedding-001 dimensionality; confirm against active model at deploy time
   tags            text[] default '{}',
   source_tool     text not null check (source_tool = 'anchor_remember'),  -- provenance only; no search-write path exists in the product
   created_at      timestamptz not null default now()
 );
 
--- Vector similarity index (IVFFlat; adequate at this table's expected scale —
--- hundreds of thousands of rows, not tens of millions)
+-- Vector similarity index. HNSW over a halfvec cast: pgvector caps vector-type
+-- ANN indexes at 2000 dims, so the 3072-dim gemini-embedding-001 output is
+-- indexed via halfvec (Supabase-documented pattern for >2000-dim vectors).
 create index if not exists memories_embedding_idx
-  on memories using ivfflat (embedding vector_cosine_ops)
-  with (lists = 100);
+  on memories using hnsw ((embedding::halfvec(3072)) halfvec_cosine_ops);
 
 create index if not exists memories_owner_idx on memories (owner_id);
 create index if not exists memories_created_idx on memories (created_at desc);
@@ -1091,7 +1091,7 @@ create index if not exists memories_created_idx on memories (created_at desc);
 -- lite path (storage/supabase.ts::matchMemoriesLite calls this same RPC
 -- with fixed args, per the module spec in §4 — no second RPC definition)
 create or replace function match_memories (
-  query_embedding vector(768),
+  query_embedding vector(3072),
   match_threshold  float,
   match_count      int,
   filter_owner_id  text
@@ -1561,7 +1561,7 @@ branch — plain web search only), `ai/router.ts`, `ai/cerebras.ts`,
 `tools/memory.ts`, `ai/gemini.ts` (add `embedText`).
 
 **Acceptance criteria**:
-- `anchor_remember` writes a row with a valid 768-dim embedding, verified
+- `anchor_remember` writes a row with a valid 3072-dim embedding, verified
   by direct Supabase query.
 - `anchor_recall` returns the written memory for a semantically similar
   query, with `similarity` above the default threshold.
@@ -1693,5 +1693,5 @@ Externally verified during this pass:
 - Cloudflare Workers free (100k req/day, 10ms CPU), Supabase free
   (2 projects, 500MB DB, 7-day auto-pause), Turso free (100 DBs, 5GB,
   500M row reads/mo) — all match current published limits.
-- Gemini `text-embedding-004` = 768-dim embeddings — correct as written
+- Gemini `gemini-embedding-001` = 3072-dim embeddings — correct as written
   in §6.1.

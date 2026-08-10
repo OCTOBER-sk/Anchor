@@ -7,17 +7,17 @@ create table if not exists memories (
   owner_id        text not null,              -- developer account id (see auth/ownership.ts)
   agent_id        text not null,               -- which agent key wrote this (for provenance, not access control)
   content         text not null,
-  embedding       vector(768) not null,        -- matches Gemini text-embedding-004 dimensionality; confirm against active model at deploy time
+  embedding       vector(3072) not null,       -- matches Gemini gemini-embedding-001 dimensionality; confirm against active model at deploy time
   tags            text[] default '{}',
   source_tool     text not null check (source_tool = 'anchor_remember'),  -- provenance only; no search-write path exists in the product
   created_at      timestamptz not null default now()
 );
 
--- Vector similarity index (IVFFlat; adequate at this table's expected scale —
--- hundreds of thousands of rows, not tens of millions)
+-- Vector similarity index. HNSW over a halfvec cast: pgvector caps vector-type
+-- ANN indexes at 2000 dims, so the 3072-dim gemini-embedding-001 output is
+-- indexed via halfvec (Supabase-documented pattern for >2000-dim vectors).
 create index if not exists memories_embedding_idx
-  on memories using ivfflat (embedding vector_cosine_ops)
-  with (lists = 100);
+  on memories using hnsw ((embedding::halfvec(3072)) halfvec_cosine_ops);
 
 create index if not exists memories_owner_idx on memories (owner_id);
 create index if not exists memories_created_idx on memories (created_at desc);
@@ -27,7 +27,7 @@ create index if not exists memories_created_idx on memories (created_at desc);
 -- lite path (storage/supabase.ts::matchMemoriesLite calls this same RPC
 -- with fixed args, per the module spec in §4 — no second RPC definition)
 create or replace function match_memories (
-  query_embedding vector(768),
+  query_embedding vector(3072),
   match_threshold  float,
   match_count      int,
   filter_owner_id  text

@@ -12,10 +12,10 @@ vi.mock('../src/ai/gemini', () => ({
 
 import { embedText } from '../src/ai/gemini';
 
-function embedding768(): number[] {
-  const values = new Array<number>(768);
+function embedding3072(): number[] {
+  const values = new Array<number>(3072);
   for (let i = 0; i < values.length; i += 1) {
-    values[i] = i / 768;
+    values[i] = i / 3072;
   }
   return values;
 }
@@ -44,8 +44,8 @@ afterEach(() => {
 });
 
 describe('tools/memory — anchor_remember', () => {
-  it('writes a memory via the Supabase REST insert with a 768-dim embedding', async () => {
-    vi.mocked(embedText).mockResolvedValue(embedding768());
+  it('writes a memory via the Supabase REST insert with a 3072-dim embedding', async () => {
+    vi.mocked(embedText).mockResolvedValue(embedding3072());
     fetchMock.mockResolvedValue(new Response(JSON.stringify([{ id: 'mem-123' }]), { status: 201 }));
 
     const result = await handleRemember({ content: 'the deployment pipeline runs CI', tags: ['devops'] }, ctx);
@@ -73,13 +73,13 @@ describe('tools/memory — anchor_remember', () => {
     expect(body.owner_id).toBe('anchor-deployment-owner');
     expect(body.agent_id).toBe('test-agent-id');
     expect(body.content).toBe('the deployment pipeline runs CI');
-    expect(body.embedding).toHaveLength(768);
+    expect(body.embedding).toHaveLength(3072);
     expect(body.tags).toEqual(['devops']);
     expect(body.source_tool).toBe('anchor_remember');
   });
 
   it('defaults tags to an empty array when not supplied', async () => {
-    vi.mocked(embedText).mockResolvedValue(embedding768());
+    vi.mocked(embedText).mockResolvedValue(embedding3072());
     fetchMock.mockResolvedValue(new Response(JSON.stringify([{ id: 'mem-2' }]), { status: 201 }));
 
     await handleRemember({ content: 'plain memory' }, ctx);
@@ -90,7 +90,7 @@ describe('tools/memory — anchor_remember', () => {
 
   it('exposes the raw provider name in _meta for admin-tier agents', async () => {
     const adminCtx = buildTestContext(await buildTestEnv(), { agentTier: 'admin' });
-    vi.mocked(embedText).mockResolvedValue(embedding768());
+    vi.mocked(embedText).mockResolvedValue(embedding3072());
     fetchMock.mockResolvedValue(new Response(JSON.stringify([{ id: 'mem-3' }]), { status: 201 }));
 
     const result = await handleRemember({ content: 'admin memory' }, adminCtx);
@@ -101,7 +101,7 @@ describe('tools/memory — anchor_remember', () => {
 
 describe('tools/memory — anchor_recall', () => {
   it('queries the match_memories RPC and returns matches with similarity', async () => {
-    vi.mocked(embedText).mockResolvedValue(embedding768());
+    vi.mocked(embedText).mockResolvedValue(embedding3072());
     const rows = [
       { id: 'mem-1', content: 'CI pipeline config lives in .github', tags: ['devops'], similarity: 0.88, created_at: '2026-08-01T00:00:00.000Z' },
       { id: 'mem-2', content: 'Deploy uses wrangler', tags: [], similarity: 0.81, created_at: '2026-08-02T00:00:00.000Z' },
@@ -125,14 +125,14 @@ describe('tools/memory — anchor_recall', () => {
       match_count: number;
       filter_owner_id: string;
     };
-    expect(body.query_embedding).toHaveLength(768);
+    expect(body.query_embedding).toHaveLength(3072);
     expect(body.match_threshold).toBe(0.75);
     expect(body.match_count).toBe(10);
     expect(body.filter_owner_id).toBe('anchor-deployment-owner');
   });
 
   it('honors caller-supplied match_threshold and match_count', async () => {
-    vi.mocked(embedText).mockResolvedValue(embedding768());
+    vi.mocked(embedText).mockResolvedValue(embedding3072());
     fetchMock.mockResolvedValue(new Response('[]', { status: 200 }));
 
     await handleRecall({ query: 'memory', match_threshold: 0.5, match_count: 3 }, ctx);
@@ -148,7 +148,7 @@ describe('tools/memory — anchor_recall', () => {
 
 describe('tools/memory — loud failure (MEMORY_UNAVAILABLE)', () => {
   it('surfaces MEMORY_UNAVAILABLE when the Supabase insert fails', async () => {
-    vi.mocked(embedText).mockResolvedValue(embedding768());
+    vi.mocked(embedText).mockResolvedValue(embedding3072());
     fetchMock.mockResolvedValue(new Response('boom', { status: 500 }));
 
     const err = await rejectionOf(handleRemember({ content: 'anything' }, ctx));
@@ -157,7 +157,7 @@ describe('tools/memory — loud failure (MEMORY_UNAVAILABLE)', () => {
   });
 
   it('surfaces MEMORY_UNAVAILABLE when the Supabase RPC call fails', async () => {
-    vi.mocked(embedText).mockResolvedValue(embedding768());
+    vi.mocked(embedText).mockResolvedValue(embedding3072());
     fetchMock.mockResolvedValue(new Response('boom', { status: 500 }));
 
     const err = await rejectionOf(handleRecall({ query: 'anything' }, ctx));

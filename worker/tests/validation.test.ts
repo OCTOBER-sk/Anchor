@@ -93,7 +93,7 @@ describe('tools/call argument validation', () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.includes(':embedContent')) {
-        return new Response(JSON.stringify({ embedding: { values: new Array(768).fill(0.1) } }), { status: 200 });
+        return new Response(JSON.stringify({ embedding: { values: new Array(3072).fill(0.1) } }), { status: 200 });
       }
       if (url.includes('/rpc/match_memories')) {
         return new Response(

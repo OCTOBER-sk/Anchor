@@ -33,7 +33,7 @@ let ctx: Context;
 beforeEach(async () => {
   vi.clearAllMocks();
   vi.mocked(runSearchPipeline).mockResolvedValue(mockSearchResult());
-  vi.mocked(embedText).mockResolvedValue(new Array<number>(768).fill(0.5));
+  vi.mocked(embedText).mockResolvedValue(new Array<number>(3072).fill(0.5));
   vi.mocked(matchMemoriesLite).mockResolvedValue([]);
   ctx = buildTestContext(await buildTestEnv());
 });

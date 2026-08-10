@@ -32,7 +32,7 @@ const VENDOR_NAMES = ['cerebras', 'gemini', 'tavily', 'ddg', 'apify'];
 
 beforeEach(async () => {
   vi.mocked(runSearchPipeline).mockResolvedValue(mockSearchResult());
-  vi.mocked(embedText).mockResolvedValue(new Array<number>(768).fill(0.5));
+  vi.mocked(embedText).mockResolvedValue(new Array<number>(3072).fill(0.5));
   vi.mocked(matchMemoriesLite).mockResolvedValue([]);
 });
 

@@ -30,10 +30,10 @@ import { embedText } from '../src/ai/gemini';
 import { matchMemoriesLite } from '../src/storage/supabase';
 import { captureError } from '../src/utils/monitoring';
 
-function embedding768(): number[] {
-  const values = new Array<number>(768);
+function embedding3072(): number[] {
+  const values = new Array<number>(3072);
   for (let i = 0; i < values.length; i += 1) {
-    values[i] = i / 768;
+    values[i] = i / 3072;
   }
   return values;
 }
@@ -54,7 +54,7 @@ let ctx: Context;
 beforeEach(async () => {
   vi.clearAllMocks();
   vi.mocked(runSearchPipeline).mockResolvedValue(mockSearchResult());
-  vi.mocked(embedText).mockResolvedValue(embedding768());
+  vi.mocked(embedText).mockResolvedValue(embedding3072());
   vi.mocked(matchMemoriesLite).mockResolvedValue([]);
   ctx = buildTestContext(await buildTestEnv());
 });
@@ -76,7 +76,7 @@ describe('auto-recall injection — §5', () => {
     expect(runSearchPipeline).toHaveBeenCalledTimes(1);
     expect(matchMemoriesLite).toHaveBeenCalledTimes(1);
     expect(embedText).toHaveBeenCalledWith('cloudflare workers', ctx.env);
-    expect(matchMemoriesLite).toHaveBeenCalledWith(embedding768(), { ownerId: 'anchor-deployment-owner' }, ctx.env);
+    expect(matchMemoriesLite).toHaveBeenCalledWith(embedding3072(), { ownerId: 'anchor-deployment-owner' }, ctx.env);
   });
 
   it('resolves with related_memories: [] and logs recallForSearch when embedding fails (critical #2 variant A)', async () => {
