@@ -13,8 +13,22 @@ function allowedOrigins(env: Env): string[] {
     .filter((origin) => origin.length > 0);
 }
 
-function corsHeaders(env: Env, origin: string | null): Record<string, string> {
-  if (origin !== null && allowedOrigins(env).includes(origin)) {
+export function originMatches(entry: string, origin: string): boolean {
+  const wildcardIndex = entry.indexOf('*');
+  if (wildcardIndex === -1) {
+    return entry === origin;
+  }
+  const prefix = entry.slice(0, wildcardIndex);
+  const suffix = entry.slice(wildcardIndex + 1);
+  return (
+    origin.startsWith(prefix) &&
+    origin.endsWith(suffix) &&
+    origin.length >= prefix.length + suffix.length
+  );
+}
+
+export function corsHeaders(env: Env, origin: string | null): Record<string, string> {
+  if (origin !== null && allowedOrigins(env).some((entry) => originMatches(entry, origin))) {
     return {
       'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
