@@ -144,7 +144,7 @@ async function handleCreateKey(request: Request, env: Env): Promise<Response> {
     const agent = await createAgent({ keyHash, keyCiphertext, slug, name, ownerId: auth.userId, tier }, env);
     return apiOk({
       id: agent.id,
-      key, // raw key — returned ONLY on this call, never again
+      key, // raw key — also re-viewable later via GET /api/agent-keys/:id/reveal
       name: agent.name,
       slug: agent.slug,
       tier: agent.tier,

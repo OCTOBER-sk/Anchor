@@ -54,7 +54,7 @@ export const authenticationData = {
   notes: [
     'Every request to the MCP endpoint must include the Authorization header above.',
     'The key is a URL-safe slug identifying the runtime, followed by a 32-character hex secret.',
-    'Create and manage keys from the dashboard. The raw key is shown exactly once, at creation — never again.',
+    'Create and manage keys from the dashboard. You can re-view and copy the raw key any time from the keys list.',
   ],
 };
 

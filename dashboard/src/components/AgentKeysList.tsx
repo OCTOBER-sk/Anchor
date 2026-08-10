@@ -83,9 +83,8 @@ function AgentKeyRow({
     }
   }
 
-  // Show is one-directional: re-showing reuses the cached raw key (we never
-  // hold it after a collapse, but within a session the fetched value is kept).
-  // Collapse happens via Hide, which drops the cached key from view only.
+  // Show fetches the raw key once (cached for the session), then opens the
+  // key-view modal. Hide closes the modal, dropping the key from view only.
   async function handleShow() {
     if (rawKey !== null) {
       setRevealed(true);
@@ -195,23 +194,7 @@ function AgentKeyRow({
       </div>
 
       {revealed && rawKey !== null ? (
-        <div className="mt-4">
-          <figure className="relative overflow-hidden rounded-control bg-code-bg">
-            <div className="absolute right-3 top-3 flex items-center gap-2">
-              <CopyButton text={rawKey} tone="code" />
-              <button
-                type="button"
-                onClick={handleHide}
-                className="rounded-control border border-border-default/40 px-3 py-1.5 font-body text-body-sm text-code-text transition-colors hover:border-border-default/80 hover:text-code-accent"
-              >
-                Hide
-              </button>
-            </div>
-            <pre className="overflow-x-auto p-4 pr-28 font-mono text-mono-sm leading-6 text-code-text">
-              <code>{rawKey}</code>
-            </pre>
-          </figure>
-        </div>
+        <KeyViewModal agentKey={agentKey} rawKey={rawKey} onClose={handleHide} />
       ) : isLegacy ? (
         <p className="mt-4 text-body-sm text-text-tertiary">
           This key was created before keys could be re-viewed, so it can&apos;t be shown again. Create a new key and revoke this one to move forward.
@@ -221,6 +204,87 @@ function AgentKeyRow({
           {revealError}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+function KeyViewModal({
+  agentKey,
+  rawKey,
+  onClose,
+}: {
+  agentKey: AgentKey;
+  rawKey: string;
+  onClose: () => void;
+}) {
+  const copyRowRef = useRef<HTMLDivElement>(null);
+
+  // Focus the Copy button on open so the first keypress copies the key.
+  useEffect(() => {
+    copyRowRef.current?.querySelector('button')?.focus();
+  }, []);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/50 px-6 py-6"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="view-key-title"
+        className="card flex max-h-[calc(100dvh-3rem)] w-full max-w-lg flex-col p-6 sm:p-8"
+      >
+        <header className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <h2 id="view-key-title" className="font-display font-medium text-display-md text-text-primary">
+              {agentKey.name}
+            </h2>
+            <TierBadge tier={agentKey.tier} />
+            <StatusBadge status={agentKey.status} />
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control border border-border-default text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M4 4l8 8" />
+              <path d="M12 4l-8 8" />
+            </svg>
+          </button>
+        </header>
+
+        <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-body-sm text-text-tertiary">Agent key</p>
+            <div ref={copyRowRef}>
+              <CopyButton text={rawKey} />
+            </div>
+          </div>
+          <div className="mt-2 overflow-hidden rounded-control bg-code-bg">
+            <pre className="overflow-x-auto p-4 font-mono text-mono-sm leading-6 text-code-text">
+              <code>{rawKey}</code>
+            </pre>
+          </div>
+          <p className="mt-4 text-body-sm text-text-tertiary">You can re-view this key any time.</p>
+        </div>
+
+        <footer className="mt-6 border-t border-border-default pt-4">
+          <p className="text-body-sm text-text-tertiary">Created {formatShortDate(agentKey.createdAt)}</p>
+        </footer>
+      </div>
     </div>
   );
 }
