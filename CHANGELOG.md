@@ -2,6 +2,13 @@
 
 All notable changes to Anchor are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/); this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Re-viewable agent keys** — create a key with a tier (standard / admin / debug) and reveal or copy any key again from the dashboard, any time (keys are encrypted at rest)
+- **Connect step** after key creation — copy-ready runtime config and an agent setup prompt, so a newly connected agent loads its capabilities on the first session
+- Landing demo terminal now types inside a fixed box — the page stays perfectly still while it animates
+
 ## [1.0.0] — 2026-08-10
 
 Anchor is live: a remote MCP server with a web dashboard and semantic vector memory.
