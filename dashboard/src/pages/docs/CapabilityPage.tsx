@@ -16,9 +16,9 @@ import {
 
 /**
  * Shared capability page — frontend.md §3.7. Renders one capability from
- * `capability-pages-data.ts` for the three routes under /docs/capabilities.
- * What/problem → schema tables → examples → worked examples → errors →
- * limits.
+ * `capability-pages-data.ts` for the param route /docs/capabilities/:capabilityId.
+ * URL slugs are the data keys: 'search' | 'dev-search' | 'memory'.
+ * What/problem → schema tables → examples → worked examples → errors → limits.
  */
 
 const pageIntros: Record<string, { accomplish: string; prerequisites: string[] }> = {
@@ -38,7 +38,8 @@ const pageIntros: Record<string, { accomplish: string; prerequisites: string[] }
 
 export function CapabilityPage() {
   const { capabilityId } = useParams();
-  const data = capabilityPages.find((page) => page.route === capabilityId);
+  const key = capabilityId?.trim().toLowerCase();
+  const data = capabilityPages.find((page) => page.route === key);
 
   if (!data) {
     return <Navigate to="/docs" replace />;

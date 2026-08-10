@@ -74,8 +74,8 @@ function Sidebar({ open }: { open: boolean }) {
     <aside className={`${open ? 'block' : 'hidden'} w-full shrink-0 border-b border-border-default lg:block lg:w-64 lg:border-b-0 lg:border-r`}>
       <div className="flex items-start justify-between px-6 py-6">
         <div>
-          <Link to="/" className="font-display font-medium text-display-md text-text-primary">
-            Anchor
+          <Link to="/" className="inline-flex items-center">
+            <img src="/logo.svg" alt="Anchor" className="h-7 w-auto" />
           </Link>
           <p className="mt-1 text-body-sm text-text-tertiary">Docs</p>
         </div>
@@ -131,8 +131,8 @@ export function DocsLayout() {
   return (
     <div className="min-h-screen bg-bg-base lg:flex">
       <header className="flex h-16 items-center justify-between border-b border-border-default px-6 lg:hidden">
-        <Link to="/docs" className="font-display font-medium text-display-md text-text-primary">
-          Docs
+        <Link to="/docs" className="inline-flex items-center">
+          <img src="/logo.svg" alt="Anchor" className="h-7 w-auto" />
         </Link>
         <div className="flex items-center gap-2">
           <button

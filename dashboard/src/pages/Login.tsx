@@ -58,8 +58,8 @@ export function Login() {
       <div className="w-full max-w-sm">
         <div className="card p-8">
           <div className="text-center mb-8">
-            <Link to="/" className="font-display font-medium text-display-md text-text-primary">
-              Anchor
+            <Link to="/" className="inline-flex items-center justify-center">
+              <img src="/logo.svg" alt="Anchor" className="h-7 w-auto" />
             </Link>
             <p className="mt-2 text-body-sm text-text-secondary">The memory layer for your AI agents</p>
           </div>

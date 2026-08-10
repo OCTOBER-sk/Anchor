@@ -182,6 +182,11 @@ copy stays `font-normal` (400). No weight or family beyond the loaded set
 (fonts.css) — the 500 headline weight resolves against Zodiak's loaded
 400/600 faces.
 
+**Logo & favicon:** `dashboard/public/logo.svg` (flat mint `#4ADE9B` mark +
+"Anchor" in thin serif `#F2F0E8`, used at ~28px on the nav, docs sidebar,
+login, and dashboard shell) and `dashboard/public/favicon.svg` (mark only,
+linked from `index.html`) — both on transparent, no gradients or glow.
+
 **Italics:** Fontshare's Zodiak exposes only a `wght` axis — there is no
 italic face (verified against the Fontshare API). The landing hero's single
 accent word is therefore rendered in regular serif with `text-accent`; the

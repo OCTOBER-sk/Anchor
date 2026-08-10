@@ -52,8 +52,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       <div className="px-6 py-6">
-        <Link to="/" className="font-display font-medium text-display-md text-text-primary" onClick={onNavigate}>
-          Anchor
+        <Link to="/" className="inline-flex items-center" onClick={onNavigate}>
+          <img src="/logo.svg" alt="Anchor" className="h-7 w-auto" />
         </Link>
       </div>
 

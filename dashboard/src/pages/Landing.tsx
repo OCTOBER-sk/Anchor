@@ -49,8 +49,8 @@ function NavBar() {
   return (
     <nav className="border-b border-border-default">
       <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-8">
-        <Link to="/" className="font-display font-medium text-display-md text-text-primary">
-          Anchor
+        <Link to="/" className="inline-flex items-center">
+          <img src="/logo.svg" alt="Anchor" className="h-7 w-auto" />
         </Link>
         <div className="flex items-center gap-6">
           <Link to="/docs" className="text-body-md text-text-secondary hover:text-text-primary">

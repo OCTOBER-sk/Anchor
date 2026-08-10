@@ -41,9 +41,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <DocsHomePage /> },
       { path: 'quickstart', element: <QuickstartPage /> },
-      { path: 'capabilities/search', element: <CapabilityPage /> },
-      { path: 'capabilities/dev-search', element: <CapabilityPage /> },
-      { path: 'capabilities/memory', element: <CapabilityPage /> },
+      { path: 'capabilities/:capabilityId', element: <CapabilityPage /> },
       { path: 'api-reference', element: <ApiReferencePage /> },
       { path: 'troubleshooting', element: <TroubleshootingPage /> },
     ],
