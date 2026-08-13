@@ -25,6 +25,25 @@
 
 Works with Claude Code, Cursor, OpenCode, Hermes, Antigravity, and any MCP-compatible runtime.
 
+## Live
+
+The dashboard and docs are deployed — these are pages from the running site:
+
+<p align="center">
+  <img src="screenshots/landing.png" alt="Landing page" width="75%">
+  <br/><em>Landing — anchor-dashboard-5mp.pages.dev</em>
+</p>
+
+<p align="center">
+  <img src="screenshots/docs.png" alt="Documentation" width="75%">
+  <br/><em>Docs — Introduction</em>
+</p>
+
+<p align="center">
+  <img src="screenshots/quickstart.png" alt="Quickstart" width="75%">
+  <br/><em>Docs — Quickstart</em>
+</p>
+
 ## Quickstart
 
 1. **Create an agent key** — [open the dashboard](https://anchor-dashboard-5mp.pages.dev), sign in, and create a key. Each runtime gets its own.
